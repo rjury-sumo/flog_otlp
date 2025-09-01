@@ -13,8 +13,8 @@ Mapping for flog payload:
 
 Example standard body as it appears in sumo side:
 
-```
-{"log.source":"flog","log":"41.253.249.79 - rath4856 [27/Aug/2025:16:31:15 +1200] \"HEAD /empower HTTP/2.0\" 501 8873"}
+```json
+{"log_source":"flog","log_type":"apache_common","log":"41.253.249.79 - rath4856 [27/Aug/2025:16:31:15 +1200] \"HEAD /empower HTTP/2.0\" 501 8873"}
 ```
 
 ## Installation

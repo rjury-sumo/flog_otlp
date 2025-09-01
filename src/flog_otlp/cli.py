@@ -222,7 +222,8 @@ def main():
         delay=args.delay,
         otlp_headers=otlp_headers,
         otlp_attributes=otlp_attributes,
-        telemetry_attributes=telemetry_attributes
+        telemetry_attributes=telemetry_attributes,
+        log_format=args.format
     )
     
     # Determine execution mode

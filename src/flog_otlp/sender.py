@@ -10,10 +10,11 @@ from datetime import datetime, timezone
 
 class OTLPLogSender:
     def __init__(self, endpoint="http://localhost:4318/v1/logs", service_name="flog-generator", delay=0.1, 
-                 otlp_headers=None, otlp_attributes=None, telemetry_attributes=None):
+                 otlp_headers=None, otlp_attributes=None, telemetry_attributes=None, log_format="apache_common"):
         self.endpoint = endpoint
         self.service_name = service_name
         self.delay = delay
+        self.log_format = log_format
         self.otlp_headers = otlp_headers or {}
         self.otlp_attributes = otlp_attributes or {}
         self.telemetry_attributes = telemetry_attributes or {}
@@ -89,8 +90,12 @@ class OTLPLogSender:
         # Build log record attributes - start with defaults then add telemetry attributes
         log_attributes = [
             {
-                "key": "log.source",
+                "key": "log_source",
                 "value": {"stringValue": "flog"}
+            },
+            {
+                "key": "log_type",
+                "value": {"stringValue": self.log_format}
             }
         ]
         
