@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flog-otlp"
+version = "0.1.0"
+description = "A Python utility that generates realistic log data using flog and sends it to OpenTelemetry Protocol (OTLP) endpoints"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: System :: Logging",
+    "Topic :: System :: Monitoring",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["otlp", "opentelemetry", "logging", "flog", "observability", "testing"]
+dependencies = [
+    "requests>=2.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "black",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+flog-otlp = "flog_otlp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/flog-otlp"
+Repository = "https://github.com/yourusername/flog-otlp.git"
+Issues = "https://github.com/yourusername/flog-otlp/issues"
+
+[tool.hatch.version]
+path = "src/flog_otlp/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flog_otlp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "B", "C", "I"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
