@@ -1,8 +1,8 @@
-# flog_otlp
-A Python utility that generates realistic log data using [flog](https://github.com/mingrammer/flog) and sends it to OpenTelemetry Protocol (OTLP) endpoints. Perfect for testing log pipelines, observability systems, and OTLP collectors.
+# flog-otlp
 
-** DISCLAIMER: My buddy Claude wrote most of this - mileage may vary! **
-He also wrote his [own readme file](readme.claudes.version.md) version as thought he could do better than me.
+A Python package that generates realistic log data using [flog](https://github.com/mingrammer/flog) and sends it to OpenTelemetry Protocol (OTLP) endpoints. Perfect for testing log pipelines, observability systems, and OTLP collectors.
+
+**Now available as a proper Python package with pip installation!**
 
 flog_otlp is a python wrapper to take STDOUT from [flog](https://github.com/mingrammer/flog) which can generate log file samples for formats like apache and json, then encode these in a OTLP compliant wrapper and forward to an OTLP endpoint. You can also provide custom attributes. I created this for testing sending OTLP log data to Sumo Logic but it could be applicable to any OTLP compliant receiver.
 
@@ -17,35 +17,80 @@ Example standard body as it appears in sumo side:
 {"log.source":"flog","log":"41.253.249.79 - rath4856 [27/Aug/2025:16:31:15 +1200] \"HEAD /empower HTTP/2.0\" 501 8873"}
 ```
 
-### install flog
+## Installation
+
+### Install flog-otlp Package
 
 ```bash
-brew tap mingrammer/flog
-brew install flog
+# Install from PyPI (when published)
+pip install flog-otlp
+
+# Or install in development mode
+git clone <repo-url>
+cd flog_otlp
+pip install -e .
+
+# Install with development dependencies
+pip install -e ".[dev]"
 ```
 
-# Executing flog-otlp
-format options for -f are: apache_common,apache_combined,apache_error,rfc3164,rfc5424,common_log,json
-
-## One time usage
+### Install flog Tool (Required)
 
 ```bash
-python3 ./flog-otlp/flog_otlp.py                              # Default: 200 logs over 10 seconds
-python3 ./flog-otlp/flog_otlp.py -n 100 -s 5s                 # 100 logs over 5 seconds  
-python3 ./flog-otlp/flog_otlp.py -f apache_common -n 50       # 50 Apache common format logs
-python3 ./flog-otlp/flog_otlp.py -f json -n 100 --no-loop     # 100 JSON logs, no infinite loop
-python3 ./flog-otlp/flog_otlp.py --otlp-endpoint https://collector:4318/v1/logs  # Custom endpoint
-python3 ./flog-otlp/flog_otlp.py --otlp-attributes environment=production --otlp-attributes region=us-east-1
-python3 ./flog-otlp/flog_otlp.py --telemetry-attributes app=web-server --telemetry-attributes debug=true
-python3 ./flog-otlp/flog_otlp.py --otlp-header "Authorization=Bearer token123" --otlp-header "X-Custom=value"
+# macOS
+brew install mingrammer/flog/flog
+
+# Go install (any platform)
+go install github.com/mingrammer/flog@latest
+```
+
+## Usage
+
+After installation, use the `flog-otlp` command. Supported log formats: `apache_common`, `apache_combined`, `apache_error`, `rfc3164`, `rfc5424`, `common_log`, `json`
+
+### Single Execution Examples
+
+```bash
+# Default: 200 logs over 10 seconds
+flog-otlp
+
+# 100 logs over 5 seconds
+flog-otlp -n 100 -s 5s
+
+# 50 Apache common format logs
+flog-otlp -f apache_common -n 50
+
+# 100 JSON logs, no infinite loop
+flog-otlp -f json -n 100 --no-loop
+
+# Custom OTLP endpoint
+flog-otlp --otlp-endpoint https://collector:4318/v1/logs
+
+# With custom resource attributes
+flog-otlp --otlp-attributes environment=production --otlp-attributes region=us-east-1
+
+# With custom log attributes
+flog-otlp --telemetry-attributes app=web-server --telemetry-attributes debug=true
+
+# With authentication headers
+flog-otlp --otlp-header "Authorization=Bearer token123" --otlp-header "X-Custom=value"
+```
+
+### Development Usage (Without Installation)
+
+```bash
+# Clone and run without installing
+git clone <repo-url>
+cd flog_otlp
+python3 scripts/run.py -n 50 -f json
 ```
 
 ## Recurring Executions
 This enables powerful use cases like continuous log generation for testing, scheduled batch processing, and long-running observability scenarios
 
 ### Smart Mode Detection
-Single mode: When wait-time=0 and max-executions=1 (default)
-Recurring mode: When wait-time>0 OR max-executions=1
+- **Single mode**: When wait-time=0 and max-executions=1 (default)
+- **Recurring mode**: When wait-time>0 OR max-executions≠1
 
 The wrapper can call your flog command and forward logs on a configurable interval.
 
@@ -61,22 +106,21 @@ No data loss during interruption
 
 ```bash
 # Run 10 times with 30 second intervals
-python3 otlp_log_sender.py --wait-time 30 --max-executions 10
+flog-otlp --wait-time 30 --max-executions 10
 
-# Run forever with 1 minute intervals  
-python3 otlp_log_sender.py --wait-time 60 --max-executions 0
+# Run forever with 1 minute intervals
+flog-otlp --wait-time 60 --max-executions 0
 
 # Generate 100 logs every 2 minutes, run 24 times (48 hours)
-python3 otlp_log_sender.py -n 100 -s 5s --wait-time 120 --max-executions 24
+flog-otlp -n 100 -s 5s --wait-time 120 --max-executions 24
 
 # High-frequency: 50 logs every 10 seconds, run until stopped
-python3 otlp_log_sender.py -n 50 -s 2s --wait-time 10 --max-executions 0
+flog-otlp -n 50 -s 2s --wait-time 10 --max-executions 0
 
 # JSON logs with custom attributes, 5 executions
-python3 otlp_log_sender.py -f json -n 200 \
+flog-otlp -f json -n 200 \
   --otlp-attributes environment=production \
   --wait-time 45 --max-executions 5
-
 ```
 
 ### Detailed Logging
@@ -135,3 +179,59 @@ EXECUTION SUMMARY:
 - `rfc5424` - RFC5424 (Modern Syslog)
 - `common_log` - Common Log Format
 - `json` - JSON structured logs
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=flog_otlp
+
+# Run specific test file
+pytest tests/test_sender.py
+```
+
+### Code Quality
+
+```bash
+# Format code
+black src/ tests/
+
+# Lint code  
+ruff check src/ tests/
+
+# Type checking
+mypy src/
+```
+
+### Project Structure
+
+```
+flog_otlp/
+├── src/flog_otlp/           # Main package
+│   ├── __init__.py          # Package initialization
+│   ├── cli.py               # Command-line interface
+│   ├── sender.py            # Core OTLP sender logic
+│   ├── parser.py            # Argument parsing utilities
+│   └── logging_config.py    # Logging configuration
+├── scripts/
+│   └── run.py               # Development runner (no install needed)
+├── tests/                   # Test suite
+└── pyproject.toml           # Package configuration
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## License
+
+See LICENSE file for details.
