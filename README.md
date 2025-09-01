@@ -141,6 +141,32 @@ docker run --rm --name flog-generator flog-otlp \
   --otlp-endpoint http://host.docker.internal:4318/v1/logs
 ```
 
+### Running with Podman
+
+When using Podman, `localhost` inside the container refers to the container itself, not the host. Use these alternatives to access services on your host:
+
+```bash
+# Recommended: Use host.containers.internal (modern Podman)
+podman run --rm flog-otlp:uv \
+  --otlp-endpoint http://host.containers.internal:4318/v1/logs \
+  -f json -n 50
+
+# Alternative 1: Use host networking (container shares host network)
+podman run --rm --network=host flog-otlp:uv \
+  --otlp-endpoint http://localhost:4318/v1/logs \
+  -f json -n 50
+
+# Alternative 2: Use your host's actual IP address
+podman run --rm flog-otlp:uv \
+  --otlp-endpoint http://YOUR_HOST_IP:4318/v1/logs \
+  -f json -n 50
+
+# Alternative 3: For older Podman versions, try host.docker.internal
+podman run --rm flog-otlp:uv \
+  --otlp-endpoint http://host.docker.internal:4318/v1/logs \
+  -f json -n 50
+```
+
 ### Docker Compose Example
 
 ```yaml
