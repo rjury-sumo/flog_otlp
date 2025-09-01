@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  flog-otlp:
+    build: .
+    command: >
+      --otlp-endpoint http://host.docker.internal:4318/v1/logs
+      --wait-time 30
+      --max-executions 0
+      --otlp-attributes environment=development
+      --otlp-attributes region=local
+      --telemetry-attributes app=flog-demo
+      -f json
+      -n 50
+      -s 10s
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  # Example: Add an OTLP collector service
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:latest
+  #   command: ["--config=/etc/otel-collector-config.yml"]
+  #   volumes:
+  #     - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+  #   ports:
+  #     - "4317:4317"   # OTLP gRPC receiver
+  #     - "4318:4318"   # OTLP HTTP receiver
+  #     - "8889:8889"   # Prometheus metrics
+  #   depends_on:
+  #     - flog-otlp

@@ -7,7 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Installation and Setup
 
 ```bash
-# Install in development mode (recommended)
+# Modern uv workflow (recommended)
+uv sync --group dev
+
+# Traditional pip workflow
 pip install -e .
 
 # Install with development dependencies  
@@ -41,26 +44,32 @@ python3 scripts/run.py -n 50 -f json
 ### Testing and Development
 
 ```bash
-# Run tests
+# Modern uv workflow (recommended)
+uv run pytest                                    # Run tests
+uv run pytest --cov=flog_otlp                   # Run with coverage  
+uv run --group lint black src/ tests/           # Format code
+uv run --group lint ruff check src/ tests/      # Lint code
+uv run --group lint mypy src/                   # Type checking
+
+# Makefile shortcuts
+make test        # Run tests
+make lint        # Run all linting
+make format      # Format code
+make check       # Format, lint, and test
+
+# Traditional workflow
 pytest
-
-# Run tests with coverage
 pytest --cov=flog_otlp
-
-# Code formatting
 black src/ tests/
-
-# Linting
 ruff check src/ tests/
-
-# Type checking
 mypy src/
 ```
 
 ### Dependencies
 - **Runtime**: `requests>=2.25.0` for HTTP OTLP transmission
 - **External**: `flog` tool must be installed: `brew install mingrammer/flog/flog`  
-- **Python**: 3.10+ required
+- **Python**: 3.13+ required
+- **uv**: Modern Python package manager (recommended)
 
 ## Architecture Overview
 

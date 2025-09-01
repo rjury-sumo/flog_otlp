@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-from .sender import OTLPLogSender
 from .cli import main
+from .sender import OTLPLogSender
 
 __all__ = ["OTLPLogSender", "main"]

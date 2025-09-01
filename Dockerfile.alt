@@ -1,0 +1,53 @@
+# Alternative Dockerfile using requirements.txt
+# Multi-stage build for flog-otlp container
+# Stage 1: Build flog binary with Go
+FROM golang:1.21-alpine AS go-builder
+
+# Install git (required for go install)
+RUN apk add --no-cache git
+
+# Install flog
+RUN go install github.com/mingrammer/flog@latest
+
+# Stage 2: Final runtime image with Python
+FROM python:3.13-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy flog binary from go-builder stage
+COPY --from=go-builder /go/bin/flog /usr/local/bin/flog
+
+# Set working directory
+WORKDIR /app
+
+# Copy and install Python dependencies first (for better caching)
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy project files  
+COPY LICENSE README.md pyproject.toml ./
+
+# Copy source code
+COPY src/flog_otlp/ /app/flog_otlp/
+
+# Create __init__.py to make it a package
+RUN touch /app/__init__.py
+
+# Add the app directory to Python path
+ENV PYTHONPATH=/app
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash flog-user && \
+    chown -R flog-user:flog-user /app
+
+USER flog-user
+
+# Set default command to run the CLI module directly
+ENTRYPOINT ["python", "-m", "flog_otlp.cli"]
+
+# Default arguments (can be overridden)
+CMD ["--help"]

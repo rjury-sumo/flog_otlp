@@ -7,7 +7,7 @@ name = "flog-otlp"
 version = "0.1.0"
 description = "A Python utility that generates realistic log data using flog and sends it to OpenTelemetry Protocol (OTLP) endpoints"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 authors = [
     {name = "Your Name", email = "your.email@example.com"},
 ]
@@ -19,23 +19,14 @@ classifiers = [
     "Topic :: System :: Monitoring",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 keywords = ["otlp", "opentelemetry", "logging", "flog", "observability", "testing"]
 dependencies = [
     "requests>=2.25.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "pytest-cov",
-    "black",
-    "ruff",
-    "mypy",
-]
 
 [project.scripts]
 flog-otlp = "flog_otlp.cli:main"
@@ -53,7 +44,7 @@ packages = ["src/flog_otlp"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "B", "C", "I"]
@@ -61,10 +52,10 @@ ignore = ["E501"]
 
 [tool.black]
 line-length = 100
-target-version = ['py310']
+target-version = ['py313']
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -77,4 +68,18 @@ python_files = ["test_*.py", "*_test.py"]
 dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
+    "black>=24.0.0",
+    "ruff>=0.10.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+test = [
+    "pytest>=8.4.1", 
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.0.0",
+]
+lint = [
+    "black>=24.0.0",
+    "ruff>=0.10.0", 
+    "mypy>=1.0.0",
 ]

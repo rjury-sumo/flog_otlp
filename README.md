@@ -19,18 +19,26 @@ Example standard body as it appears in sumo side:
 
 ## Installation
 
+### Requirements
+- **Python**: 3.13+ required
+- **uv**: Modern Python package manager (recommended)
+- **flog**: Log generation tool
+
 ### Install flog-otlp Package
 
 ```bash
-# Install from PyPI (when published)
+# Install from PyPI (when published) - using uv (recommended)
+uv add flog-otlp
+
+# Or using pip
 pip install flog-otlp
 
-# Or install in development mode
+# Development setup with uv (recommended)
 git clone <repo-url>
 cd flog_otlp
-pip install -e .
+uv sync --group dev
 
-# Install with development dependencies
+# Alternative: development setup with pip
 pip install -e ".[dev]"
 ```
 
@@ -83,6 +91,105 @@ flog-otlp --otlp-header "Authorization=Bearer token123" --otlp-header "X-Custom=
 git clone <repo-url>
 cd flog_otlp
 python3 scripts/run.py -n 50 -f json
+```
+
+## Docker Usage
+
+### Building the Docker Image
+
+```bash
+# Build with uv (fastest, recommended)
+docker build -f Dockerfile.uv -t flog-otlp:uv .
+
+# Build standard image
+docker build -t flog-otlp .
+
+# Alternative build if issues occur
+docker build -f Dockerfile.alt -t flog-otlp:alt .
+```
+
+### Running with Docker
+
+```bash
+# Show help
+docker run --rm flog-otlp
+
+# Basic usage (default: 200 logs over 10 seconds to localhost)
+docker run --rm flog-otlp -n 100 -s 5s
+
+# Send to external OTLP endpoint
+docker run --rm flog-otlp \
+  --otlp-endpoint https://your-collector:4318/v1/logs \
+  -f json -n 50
+
+# With custom attributes and headers
+docker run --rm flog-otlp \
+  --otlp-attributes environment=production \
+  --otlp-attributes region=us-west-2 \
+  --telemetry-attributes app=test-app \
+  --otlp-header "Authorization=Bearer your-token" \
+  -f apache_combined -n 100
+
+# Recurring execution (run 5 times with 30s intervals)
+docker run --rm flog-otlp \
+  --wait-time 30 --max-executions 5 \
+  -n 200 -f json
+
+# Long-running container (until stopped)
+docker run --rm --name flog-generator flog-otlp \
+  --wait-time 60 --max-executions 0 \
+  --otlp-endpoint http://host.docker.internal:4318/v1/logs
+```
+
+### Docker Compose Example
+
+```yaml
+version: '3.8'
+services:
+  flog-otlp:
+    build: .
+    command: >
+      --otlp-endpoint http://otel-collector:4318/v1/logs
+      --wait-time 30
+      --max-executions 0
+      -f json
+      -n 100
+    environment:
+      - LOG_LEVEL=INFO
+    depends_on:
+      - otel-collector
+    
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    # ... collector configuration
+```
+
+### Docker Image Details
+
+- **Base Image**: `python:3.13-slim` for minimal footprint
+- **Multi-stage Build**: Uses Go builder stage to compile flog, then copies binary to final image
+- **Security**: Runs as non-root user (`flog-user`)  
+- **Size**: Optimized with `.dockerignore` to exclude unnecessary files
+- **Dependencies**: Includes both `flog` binary and `flog-otlp` Python package
+- **uv Support**: `Dockerfile.uv` provides fastest dependency installation
+
+### Troubleshooting Docker Build
+
+All Docker builds should work now. If you encounter any issues:
+
+1. **Recommended**: Use the uv-based build (fastest)
+2. **Standard**: Use the main Dockerfile
+3. **Fallback**: Use the alternative Dockerfile
+
+```bash
+# Build with uv (recommended - fastest and most reliable)
+docker build -f Dockerfile.uv -t flog-otlp:uv .
+
+# Standard build
+docker build -t flog-otlp .
+
+# Alternative build (if others fail)
+docker build -f Dockerfile.alt -t flog-otlp:alt .
 ```
 
 ## Recurring Executions
@@ -182,7 +289,40 @@ EXECUTION SUMMARY:
 
 ## Development
 
-### Running Tests
+### Modern Workflow with uv (Recommended)
+
+```bash
+# Setup development environment
+uv sync --group dev
+
+# Run tests
+uv run pytest
+
+# Run tests with coverage  
+uv run pytest --cov=flog_otlp --cov-report=term-missing
+
+# Run specific test file
+uv run pytest tests/test_sender.py
+
+# Code formatting
+uv run --group lint black src/ tests/
+uv run --group lint ruff format src/ tests/
+
+# Linting and type checking
+uv run --group lint ruff check src/ tests/
+uv run --group lint mypy src/
+
+# Run application
+uv run flog-otlp --help
+
+# Use Makefile for convenience
+make test        # Run tests
+make lint        # Run all linting
+make format      # Format code  
+make check       # Format, lint, and test
+```
+
+### Traditional Workflow (pip/pytest)
 
 ```bash
 # Run all tests
@@ -191,20 +331,9 @@ pytest
 # Run with coverage
 pytest --cov=flog_otlp
 
-# Run specific test file
-pytest tests/test_sender.py
-```
-
-### Code Quality
-
-```bash
-# Format code
+# Code quality tools
 black src/ tests/
-
-# Lint code  
 ruff check src/ tests/
-
-# Type checking
 mypy src/
 ```
 
