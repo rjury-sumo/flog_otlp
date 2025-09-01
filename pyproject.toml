@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flog-otlp"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python utility that generates realistic log data using flog and sends it to OpenTelemetry Protocol (OTLP) endpoints"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Rick Jury", email = "rjury@sumologic.com"},
 ]
 license = {file = "LICENSE"}
 classifiers = [
@@ -32,9 +32,9 @@ dependencies = [
 flog-otlp = "flog_otlp.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/flog-otlp"
-Repository = "https://github.com/yourusername/flog-otlp.git"
-Issues = "https://github.com/yourusername/flog-otlp/issues"
+Homepage = "https://github.com/rjury-sumo/flog_otlp/"
+Repository = "https://github.com/rjury-sumo/flog_otlp.git"
+Issues = "https://github.com/rjury-sumo/flog_otlp/issues"
 
 [tool.hatch.version]
 path = "src/flog_otlp/__init__.py"
@@ -72,6 +72,7 @@ dev = [
     "ruff>=0.10.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
+    "twine>=6.1.0",
 ]
 test = [
     "pytest>=8.4.1", 
