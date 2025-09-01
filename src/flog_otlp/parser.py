@@ -20,7 +20,12 @@ def parse_key_value_pairs(values_list):
         key = key.strip()
         value = value.strip()
         
-        # Remove surrounding quotes if present
+        # Remove surrounding quotes from key if present
+        if (key.startswith('"') and key.endswith('"')) or \
+           (key.startswith("'") and key.endswith("'")):
+            key = key[1:-1]
+        
+        # Remove surrounding quotes from value if present
         if (value.startswith('"') and value.endswith('"')) or \
            (value.startswith("'") and value.endswith("'")):
             value = value[1:-1]
