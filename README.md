@@ -4,7 +4,7 @@ A Python package that generates realistic log data using [flog](https://github.c
 
 **Now available as a proper Python package with pip installation!**
 
-flog_otlp is a python wrapper to take STDOUT from [flog](https://github.com/mingrammer/flog) which can generate log file samples for formats like apache and json, then encode these in a OTLP compliant wrapper and forward to an OTLP endpoint. You can also provide custom attributes. I created this for testing sending OTLP log data to Sumo Logic but it could be applicable to any OTLP compliant receiver.
+flog_otlp is a python wrapper to take STDOUT from [flog](https://github.com/mingrammer/flog) which can generate log file samples for formats like apache and json, then encode these in a OTLP compliant wrapper and forward to an OTLP endpoint. You can also provide custom attributes and execute complex scenarios with asynchronous timing control. I created this for testing sending OTLP log data to Sumo Logic but it could be applicable to any OTLP compliant receiver.
 
 Mapping for flog payload:
 - The flog event is encoded in a "log" json key.
@@ -91,6 +91,166 @@ flog-otlp --otlp-header "Authorization=Bearer token123" --otlp-header "X-Custom=
 git clone <repo-url>
 cd flog_otlp
 python3 scripts/run.py -n 50 -f json
+```
+
+## Scenario Mode
+
+**NEW in v0.2.0**: Execute complex log generation scenarios with precise asynchronous timing control using YAML configuration files.
+
+### Quick Start
+
+```bash
+# Execute a scenario from YAML file
+flog-otlp --scenario scenario.yaml
+
+# With custom endpoint
+flog-otlp --scenario scenario.yaml --otlp-endpoint https://collector:4318/v1/logs
+```
+
+### YAML Scenario Format
+
+Create a YAML file defining your test scenario:
+
+```yaml
+name: "Production Load Test"
+description: "Simulates real-world traffic patterns with overlapping log types"
+
+steps:
+  # Normal baseline traffic
+  - start_time: "0s"
+    interval: "30s"
+    iterations: 10
+    parameters:
+      format: "json"
+      number: 100
+      sleep: "10s"
+      telemetry_attributes:
+        - "log_level=info"
+        - "service=web-frontend"
+      otlp_attributes:
+        - "environment=production"
+        - "region=us-east-1"
+
+  # Error spike after 2 minutes
+  - start_time: "2m"
+    interval: "15s" 
+    iterations: 6
+    parameters:
+      format: "json"
+      number: 200
+      sleep: "8s"
+      telemetry_attributes:
+        - "log_level=error"
+        - "service=web-frontend"
+        - "incident=auth-failure"
+      otlp_attributes:
+        - "environment=production"
+        - "region=us-east-1"
+        - "alert_state=triggered"
+
+  # Recovery phase
+  - start_time: "4m"
+    interval: "45s"
+    iterations: 4
+    parameters:
+      format: "json"
+      number: 80
+      sleep: "10s"
+      telemetry_attributes:
+        - "log_level=warn"
+        - "service=web-frontend"
+        - "status=recovering"
+```
+
+### Scenario Features
+
+- **Asynchronous Execution**: All steps run concurrently with precise timing
+- **Flexible Scheduling**: Define when each step starts and how often it repeats
+- **Parameter Override**: Each step can customize any flog-otlp parameter
+- **Enhanced Logging**: INFO-level logging shows flog commands and parameters
+- **Concurrent Patterns**: Steps can overlap, run in parallel, or execute sequentially
+
+### Scenario Parameters
+
+| Parameter | Description | Example | 
+|-----------|-------------|---------|
+| `start_time` | When to begin this step | `"0s"`, `"2m"`, `"1h"` |
+| `interval` | Time between iterations | `"30s"`, `"5m"` |
+| `iterations` | Number of times to run | `1`, `10`, `0` (infinite) |
+| `parameters` | Any flog-otlp parameters | `format`, `number`, `attributes` |
+
+### Time Format Support
+- **Seconds**: `"30s"`, `"90s"`
+- **Minutes**: `"5m"`, `"2.5m"`
+- **Hours**: `"1h"`, `"0.5h"`
+- **Plain numbers**: `30` (defaults to seconds)
+
+### Real-World Scenario Examples
+
+**Gradual Load Increase**:
+```yaml
+name: "Load Test Ramp-Up"
+steps:
+  - start_time: "0s"
+    interval: "60s"
+    iterations: 5
+    parameters:
+      number: 50   # Light load
+  - start_time: "5m"  
+    interval: "30s"
+    iterations: 10
+    parameters:
+      number: 100  # Medium load
+  - start_time: "10m"
+    interval: "15s" 
+    iterations: 20
+    parameters:
+      number: 200  # Heavy load
+```
+
+**Multi-Service Simulation**:
+```yaml
+name: "Microservices Load"
+steps:
+  - start_time: "0s"
+    interval: "20s"
+    iterations: 15
+    parameters:
+      telemetry_attributes:
+        - "service=api-gateway"
+  - start_time: "10s"
+    interval: "25s"
+    iterations: 12  
+    parameters:
+      telemetry_attributes:
+        - "service=user-service"
+  - start_time: "20s"
+    interval: "35s"
+    iterations: 10
+    parameters:
+      telemetry_attributes:
+        - "service=order-service"
+```
+
+### Scenario Execution Flow
+
+1. **Load & Validate**: YAML file is parsed and validated
+2. **Schedule All Steps**: Each step is scheduled in its own thread
+3. **Asynchronous Execution**: Steps wait for their start time, then execute iterations
+4. **Real-time Logging**: Progress, commands, and parameters logged at INFO level
+5. **Graceful Shutdown**: Ctrl+C stops all threads cleanly
+
+Example output:
+```
+INFO - Starting scenario: Production Load Test
+INFO - Estimated total scenario duration: 390.0s
+INFO - All 3 steps scheduled. Waiting for completion...
+INFO - Executing step 1, iteration 1/10 at 14:30:00 UTC (T+0.0s)
+INFO - Step 1.1 flog command: flog -f json -n 100 -s 10s
+INFO - Step 1.1 parameters: {'format': 'json', 'number': 100, ...}
+INFO - Step 2 scheduled to start in 120.0s
+INFO - Step 1.1 completed in 11.2s (100 logs)
+INFO - Executing step 1, iteration 2/10 at 14:30:30 UTC (T+30.0s)
 ```
 
 ## Docker Usage
@@ -299,6 +459,7 @@ EXECUTION SUMMARY:
 ### Execution Control
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
+| `--scenario` | Path to YAML scenario file | None | `scenario.yaml`, `./tests/load.yaml` |
 | `--wait-time` | Seconds between executions | `0` (single) | `30`, `120.5` |
 | `--max-executions` | Number of executions (0=infinite) | `1` | `10`, `0` |
 | `--delay` | Delay between individual log sends | `0.1` | `0.05`, `0` |
@@ -371,11 +532,13 @@ flog_otlp/
 │   ├── __init__.py          # Package initialization
 │   ├── cli.py               # Command-line interface
 │   ├── sender.py            # Core OTLP sender logic
+│   ├── scenario.py          # Scenario YAML parsing and execution (NEW v0.2.0)
 │   ├── parser.py            # Argument parsing utilities
 │   └── logging_config.py    # Logging configuration
 ├── scripts/
 │   └── run.py               # Development runner (no install needed)
 ├── tests/                   # Test suite
+├── example_scenario.yaml    # Example scenario file (NEW v0.2.0)
 └── pyproject.toml           # Package configuration
 ```
 

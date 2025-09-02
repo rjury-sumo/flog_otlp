@@ -221,9 +221,10 @@ wheels = [
 
 [[package]]
 name = "flog-otlp"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "pyyaml" },
     { name = "requests" },
 ]
 
@@ -249,7 +250,10 @@ test = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "requests", specifier = ">=2.25.0" }]
+requires-dist = [
+    { name = "pyyaml", specifier = ">=6.0.0" },
+    { name = "requests", specifier = ">=2.25.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [

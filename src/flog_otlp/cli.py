@@ -5,6 +5,7 @@ import sys
 
 from .logging_config import setup_logging
 from .parser import parse_key_value_pairs
+from .scenario import ScenarioExecutor, ScenarioParser
 from .sender import OTLPLogSender
 
 
@@ -25,6 +26,9 @@ Examples:
   %(prog)s --wait-time 30 --max-executions 10    # Run 10 times, 30s between executions
   %(prog)s --wait-time 60 --max-executions 0     # Run forever, 60s between executions
   %(prog)s -n 50 -s 5s --wait-time 10 --max-executions 5  # 5 executions: 50 logs/5s, 10s wait
+
+  # Scenario executions:
+  %(prog)s --scenario scenario.yaml              # Execute scenario from YAML file
 
   # Custom attributes and headers:
   %(prog)s --otlp-attributes environment=production --otlp-attributes region=us-east-1
@@ -130,6 +134,12 @@ Supported log formats:
 
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
+    # Scenario mode
+    parser.add_argument(
+        "--scenario",
+        help="Path to YAML scenario file. When specified, executes the scenario instead of single/recurring mode.",
+    )
+
     return parser.parse_args()
 
 
@@ -181,28 +191,6 @@ def main():
     telemetry_attributes = parse_key_value_pairs(args.telemetry_attributes)
     otlp_headers = parse_key_value_pairs(args.otlp_header)
 
-    # Log configuration details
-    logger.info("Configuration:")
-    logger.info(f"  Endpoint: {args.otlp_endpoint}")
-    logger.info(f"  Service Name: {args.service_name}")
-    logger.info(f"  Send Delay: {args.delay}s")
-    logger.info(f"  Log Format: {args.format}")
-    logger.info(f"  Log Count: {args.number}")
-    logger.info(f"  Duration: {args.sleep}")
-    logger.info(f"  Wait Time: {args.wait_time}s")
-    logger.info(f"  Max Executions: {'∞' if args.max_executions == 0 else args.max_executions}")
-
-    if otlp_attributes:
-        logger.info(f"  OTLP Attributes: {otlp_attributes}")
-    if telemetry_attributes:
-        logger.info(f"  Telemetry Attributes: {telemetry_attributes}")
-    if otlp_headers:
-        logger.debug(f"  Custom Headers: {otlp_headers}")  # Headers may contain sensitive data
-
-    # Build flog command
-    flog_cmd = build_flog_command(args)
-    logger.debug(f"Built flog command: {' '.join(flog_cmd)}")
-
     # Create sender instance with custom parameters
     sender = OTLPLogSender(
         endpoint=args.otlp_endpoint,
@@ -215,14 +203,51 @@ def main():
     )
 
     # Determine execution mode
-    if args.wait_time > 0 or args.max_executions != 1:
-        # Recurring execution mode
-        logger.info("Using recurring execution mode")
-        success = sender.run_recurring_executions(flog_cmd, args.wait_time, args.max_executions)
+    if args.scenario:
+        # Scenario execution mode
+        logger.info("Using scenario execution mode")
+        logger.info(f"Scenario file: {args.scenario}")
+
+        try:
+            scenario_parser = ScenarioParser()
+            scenario = scenario_parser.load_scenario(args.scenario)
+
+            executor = ScenarioExecutor(sender)
+            success = executor.execute_scenario(scenario, scenario_parser)
+        except Exception as e:
+            logger.error(f"Scenario execution failed: {e}")
+            sys.exit(1)
     else:
-        # Single execution mode
-        logger.info("Using single execution mode")
-        success, _ = sender.process_flog_output(flog_cmd)
+        # Log configuration details for non-scenario modes
+        logger.info("Configuration:")
+        logger.info(f"  Endpoint: {args.otlp_endpoint}")
+        logger.info(f"  Service Name: {args.service_name}")
+        logger.info(f"  Send Delay: {args.delay}s")
+        logger.info(f"  Log Format: {args.format}")
+        logger.info(f"  Log Count: {args.number}")
+        logger.info(f"  Duration: {args.sleep}")
+        logger.info(f"  Wait Time: {args.wait_time}s")
+        logger.info(f"  Max Executions: {'∞' if args.max_executions == 0 else args.max_executions}")
+
+        if otlp_attributes:
+            logger.info(f"  OTLP Attributes: {otlp_attributes}")
+        if telemetry_attributes:
+            logger.info(f"  Telemetry Attributes: {telemetry_attributes}")
+        if otlp_headers:
+            logger.debug(f"  Custom Headers: {otlp_headers}")  # Headers may contain sensitive data
+
+        # Build flog command
+        flog_cmd = build_flog_command(args)
+        logger.debug(f"Built flog command: {' '.join(flog_cmd)}")
+
+        if args.wait_time > 0 or args.max_executions != 1:
+            # Recurring execution mode
+            logger.info("Using recurring execution mode")
+            success = sender.run_recurring_executions(flog_cmd, args.wait_time, args.max_executions)
+        else:
+            # Single execution mode
+            logger.info("Using single execution mode")
+            success, _ = sender.process_flog_output(flog_cmd)
 
     if success:
         logger.info("All logs processed successfully")

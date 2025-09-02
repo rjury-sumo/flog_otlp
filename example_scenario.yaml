@@ -1,0 +1,55 @@
+name: "Example Log Pattern Scenario"
+description: "Demonstrates mixed log levels over time with asynchronous execution - info logs, then error logs, then recovery"
+
+steps:
+  # Phase 1: Normal operations with info logs - run 60 times every 5 seconds
+  - start_time: "0s"
+    interval: "5s"
+    iterations: 60
+    parameters:
+      format: "json"
+      number: 100
+      sleep: "10s"
+      telemetry_attributes:
+        - "log_level=info"
+        - "test_phase=normal_operations"
+        - "service_tier=web"
+      otlp_attributes:
+        - "environment=test"
+        - "scenario=example"
+
+  # Phase 2: Error condition with higher log volume - start at 1 minutes, run 5 times every 5 seconds
+  - start_time: "1m"
+    interval: "5s"
+    iterations: 5
+    parameters:
+      format: "json"
+      number: 200  # Double the log volume
+      sleep: "15s"
+      telemetry_attributes:
+        - "log_level=error"
+        - "test_phase=error_condition"
+        - "service_tier=web"
+        - "incident=true"
+      otlp_attributes:
+        - "environment=test"
+        - "scenario=example"
+        - "alert_state=triggered"
+
+  # Phase 3: Recovery period with warning logs - start at 2 minutes, run 2 times every 15 seconds
+  - start_time: "2m"
+    interval: "15s"
+    iterations: 2
+    parameters:
+      format: "json"
+      number: 80
+      sleep: "10s"
+      telemetry_attributes:
+        - "log_level=warn"
+        - "test_phase=recovery"
+        - "service_tier=web"
+        - "recovery=in_progress"
+      otlp_attributes:
+        - "environment=test"
+        - "scenario=example"
+        - "alert_state=recovering"
