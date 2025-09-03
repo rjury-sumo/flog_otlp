@@ -1,0 +1,171 @@
+# Example strings file for flog-otlp custom string replacement
+# This file demonstrates various string arrays that can be used with %S[key] tokens
+
+# User names for realistic log entries
+users:
+  - "alice.johnson"
+  - "bob.smith" 
+  - "charlie.brown"
+  - "diana.prince"
+  - "edward.norton"
+  - "fiona.apple"
+  - "george.washington"
+  - "helen.keller"
+  - "ivan.petrov"
+  - "jane.doe"
+
+# Service names for microservice architectures
+services:
+  - "user-service"
+  - "order-service"
+  - "payment-service"
+  - "inventory-service"
+  - "notification-service"
+  - "auth-service"
+  - "gateway-service"
+  - "analytics-service"
+  - "search-service"
+  - "recommendation-service"
+
+# Error messages for realistic failure scenarios
+error_messages:
+  - "Connection timeout after 30 seconds"
+  - "Invalid authentication credentials"
+  - "Resource not found in database"
+  - "Rate limit exceeded for API endpoint"
+  - "Insufficient permissions for operation"
+  - "Validation failed for required fields"
+  - "Database connection pool exhausted"
+  - "External service unavailable"
+  - "Request payload too large"
+  - "Session expired, please reauthenticate"
+
+# Device types for IoT or mobile applications
+devices:
+  - "iPhone-15-Pro"
+  - "Samsung-Galaxy-S24"
+  - "MacBook-Pro-M3"
+  - "Windows-Surface-Laptop"
+  - "iPad-Air-5th-Gen"
+  - "Google-Pixel-8"
+  - "Dell-XPS-13"
+  - "Raspberry-Pi-4"
+  - "Arduino-Uno"
+  - "ESP32-DevKit"
+
+# Geographic locations for distributed systems
+locations:
+  - "us-east-1"
+  - "us-west-2"
+  - "eu-west-1"
+  - "ap-southeast-1"
+  - "ap-northeast-1"
+  - "eu-central-1"
+  - "ca-central-1"
+  - "ap-south-1"
+  - "sa-east-1"
+  - "af-south-1"
+
+# HTTP methods for API logging
+http_methods:
+  - "GET"
+  - "POST"
+  - "PUT"
+  - "DELETE"
+  - "PATCH"
+  - "HEAD"
+  - "OPTIONS"
+
+# Log levels for consistent severity indication
+log_levels:
+  - "DEBUG"
+  - "INFO"
+  - "WARN"
+  - "ERROR"
+  - "FATAL"
+
+# Business actions for audit logging
+actions:
+  - "login"
+  - "logout"
+  - "create_account"
+  - "update_profile"
+  - "delete_resource"
+  - "view_dashboard"
+  - "export_data"
+  - "import_data"
+  - "generate_report"
+  - "change_password"
+  - "reset_password"
+  - "upload_file"
+  - "download_file"
+  - "share_document"
+  - "approve_request"
+  - "reject_request"
+
+# Department names for enterprise logging
+departments:
+  - "Engineering"
+  - "Marketing"
+  - "Sales"
+  - "Human Resources"
+  - "Finance"
+  - "Operations"
+  - "Customer Support"
+  - "Product Management"
+  - "Quality Assurance"
+  - "Legal"
+
+# Transaction types for financial applications
+transaction_types:
+  - "purchase"
+  - "refund"
+  - "transfer"
+  - "deposit"
+  - "withdrawal"
+  - "payment"
+  - "subscription"
+  - "cancellation"
+  - "chargeback"
+  - "adjustment"
+
+# Common HTTP status codes greater than 399
+http_statuses_4xx:
+  - "400"
+  - "401"
+  - "404"
+
+# Common HTTP status codes greater than 499
+http_statuses_5xx:
+  - "500"
+  - "503"
+
+# CEF for a checkpoint firewall sample
+cef_checkpoint:
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|3|act=Accept deviceDirection=0 rt=Jan 15 2025 08:15:30 src=192.168.1.100 dst=203.0.113.25 spt=54321 dpt=80 proto=6 cs1Label=Rule Name cs1=Web_Access_Rule cs2Label=Service cs2=http cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=DMZ cn1Label=Bytes cn1=1024 cn2Label=Packets cn2=5
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|8|act=Drop deviceDirection=0 rt=Jan 15 2025 08:16:45 src=10.0.0.50 dst=192.168.1.10 spt=12345 dpt=22 proto=6 reason=Rule Base cs1Label=Rule Name cs1=Cleanup_Rule cs2Label=Service cs2=ssh cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|2|act=Accept deviceDirection=0 rt=Jan 15 2025 08:17:12 src=192.168.1.150 dst=8.8.8.8 spt=53124 dpt=53 proto=17 cs1Label=Rule Name cs1=DNS_Allow cs2Label=Service cs2=domain-udp cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=Internet cn1Label=Bytes cn1=512 cn2Label=Packets cn2=2
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|2|act=Accept deviceDirection=1 rt=Jan 15 2025 08:27:45 src=10.10.10.50 dst=192.168.1.200 spt=443 dpt=54000 proto=6 cs1Label=Rule Name cs1=VPN_Access cs2Label=Service cs2=https cs3Label=Source Zone cs3=VPN_Zone cs4Label=Destination Zone cs4=Internal suser=vpnuser@company.com cn1Label=Bytes cn1=3072 cn2Label=Packets cn2=12 cs5Label=VPN Tunnel cs5=Site-to-Site
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|3|act=Accept deviceDirection=0 rt=Jan 15 2025 08:23:12 src=192.168.1.180 dst=mail.example.com spt=25 dpt=587 proto=6 cs1Label=Rule Name cs1=SMTP_Outbound cs2Label=Service cs2=submission cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=Internet cn1Label=Bytes cn1=1500 cn2Label=Packets cn2=8
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|3|act=Accept deviceDirection=0 rt=Jan 15 2025 08:29:22 src=192.168.1.120 dst=backup.company.com spt=22 dpt=22 proto=6 cs1Label=Rule Name cs1=Backup_SSH cs2Label=Service cs2=ssh cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=Internet suser=backupuser cn1Label=Bytes cn1=16384 cn2Label=Packets cn2=50 cs5Label=Application cs5=SCP Transfer
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|4|act=Accept deviceDirection=0 rt=Jan 15 2025 08:19:01 src=192.168.1.75 dst=172.16.0.10 spt=443 dpt=3389 proto=6 cs1Label=Rule Name cs1=RDP_Access cs2Label=Service cs2=ms-wbt-server cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=Server_Zone suser=admin duser=administrator cn1Label=Bytes cn1=2048 cn2Label=Packets cn2=10
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|4|act=Accept deviceDirection=0 rt=Jan 15 2025 08:25:33 src=192.168.1.90 dst=updates.microsoft.com spt=80 dpt=443 proto=6 cs1Label=Rule Name cs1=Windows_Updates cs2Label=Service cs2=https cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=Internet cn1Label=Bytes cn1=8192 cn2Label=Packets cn2=25 cs5Label=Application cs5=Microsoft Update
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|4|act=Accept deviceDirection=0 rt=Jan 15 2025 08:31:15 src=192.168.1.60 dst=www.antivirus.com spt=80 dpt=443 proto=6 cs1Label=Rule Name cs1=Antivirus_Updates cs2Label=Service cs2=https cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=Internet cn1Label=Bytes cn1=5120 cn2Label=Packets cn2=20 cs5Label=Application cs5=Antivirus Update
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|5|act=Accept deviceDirection=1 rt=Jan 15 2025 08:21:45 src=192.168.1.25 dst=192.168.1.30 spt=3306 dpt=54321 proto=6 cs1Label=Rule Name cs1=Database_Access cs2Label=Service cs2=mysql cs3Label=Source Zone cs3=DB_Zone cs4Label=Destination Zone cs4=App_Zone cn1Label=Bytes cn1=4096 cn2Label=Packets cn2=15 suser=dbuser duser=appuser
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|accept|Accept|5|act=Accept deviceDirection=1 rt=Jan 15 2025 08:33:12 src=192.168.1.35 dst=172.16.0.50 spt=389 dpt=54100 proto=6 cs1Label=Rule Name cs1=LDAP_Query cs2Label=Service cs2=ldap cs3Label=Source Zone cs3=Internal cs4Label=Destination Zone cs4=DC_Zone suser=CORP\serviceaccount cn1Label=Bytes cn1=2048 cn2Label=Packets cn2=8 cs5Label=Application cs5=Active Directory
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|6|act=Drop deviceDirection=0 rt=Jan 15 2025 08:22:30 src=172.16.255.1 dst=192.168.1.1 spt=23 dpt=23 proto=6 reason=Spoof cs1Label=Rule Name cs1=Anti_Spoofing cs2Label=Service cs2=telnet cs3Label=Source Zone cs3=Unknown cs4Label=Destination Zone cs4=Internal msg=IP spoofing attempt detected
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|6|act=Drop deviceDirection=0 rt=Jan 15 2025 08:32:30 src=10.0.0.25 dst=192.168.1.100 spt=27015 dpt=27015 proto=17 reason=Rule Base cs1Label=Rule Name cs1=Block_Gaming cs2Label=Service cs2=halflife cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1 msg=Gaming protocol blocked by policy
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|7|act=Drop deviceDirection=0 rt=Jan 15 2025 08:18:33 src=203.0.113.100 dst=192.168.1.200 spt=4444 dpt=445 proto=6 reason=Rule Base cs1Label=Rule Name cs1=Block_SMB cs2Label=Service cs2=microsoft-ds cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1 msg=Potential malicious activity detected
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|7|act=Drop deviceDirection=0 rt=Jan 15 2025 08:26:18 src=203.0.113.200 dst=192.168.1.254 spt=161 dpt=161 proto=17 reason=Rule Base cs1Label=Rule Name cs1=Block_SNMP cs2Label=Service cs2=snmp cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1 msg=SNMP enumeration attempt
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|7|act=Drop deviceDirection=0 rt=Jan 15 2025 08:34:45 src=203.0.113.50 dst=192.168.1.250 spt=69 dpt=69 proto=17 reason=Rule Base cs1Label=Rule Name cs1=Block_TFTP cs2Label=Service cs2=tftp cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1 msg=TFTP access attempt blocked
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|8|act=Drop deviceDirection=0 rt=Jan 15 2025 08:24:05 src=10.0.0.100 dst=192.168.1.100 spt=135 dpt=135 proto=6 reason=Rule Base cs1Label=Rule Name cs1=Block_RPC cs2Label=Service cs2=loc-srv cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1 msg=RPC endpoint mapper access attempt
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|8|act=Drop deviceDirection=0 rt=Jan 15 2025 08:30:45 src=172.16.0.200 dst=192.168.1.5 spt=1433 dpt=1433 proto=6 reason=Stealth cs1Label=Rule Name cs1=Stealth_Rule cs2Label=Service cs2=ms-sql-s cs3Label=Source Zone cs3=Unknown cs4Label=Destination Zone cs4=Internal msg=Stealth scan detected - SQL Server port probe
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|9|act=Drop deviceDirection=0 rt=Jan 15 2025 08:20:15 src=198.51.100.75 dst=192.168.1.50 spt=1234 dpt=21 proto=6 reason=Rule Base cs1Label=Rule Name cs1=Block_FTP cs2Label=Service cs2=ftp cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1 msg=FTP access attempt from suspicious source
+  - CEF:0|Check Point|VPN-1 & FireWall-1|R81.20|drop|Drop|9|act=Drop deviceDirection=0 rt=Jan 15 2025 08:28:10 src=198.51.100.150 dst=192.168.1.10 spt=7777 dpt=7777 proto=6 reason=Rule Base cs1Label=Rule Name cs1=Block_Backdoor_Ports cs2Label=Service cs2=cbt cs3Label=Source Zone cs3=Internet cs4Label=Destination Zone cs4=Internal cn1Label=Bytes cn1=0 cn2Label=Packets cn2=1 msg=Connection to backdoor port detected
+
+# example aws recipientaccountid fields
+aws_recipientaccountid:
+  - "123456789012"
+  - "210987654321"
+  - "112233445566"
+  - "665544332211"

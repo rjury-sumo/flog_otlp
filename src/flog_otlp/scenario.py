@@ -17,13 +17,14 @@ from lorem_text import lorem
 class ScenarioStep:
     """Represents a single step in a scenario."""
 
-    def __init__(self, step_data: Dict[str, Any]):
+    def __init__(self, step_data: Dict[str, Any], custom_strings: Dict[str, List[str]] = None):
         self.start_time_seconds = self._parse_duration(step_data.get("start_time", "0s"))
         self.interval_seconds = self._parse_duration(step_data.get("interval", "10s"))
         self.iterations = step_data.get("iterations", 1)
         self.parameters = step_data.get("parameters", {})
         self.filters = step_data.get("filters", [])
         self.replacements = step_data.get("replacements", [])
+        self.custom_strings = custom_strings or {}
 
         # Compile regex patterns for efficiency
         self.compiled_filters = []
@@ -148,6 +149,17 @@ class ScenarioStep:
             guid = "-".join(guid_parts)
             result = result.replace("%g", guid)
 
+        # %S[key] - Custom string from strings file
+        s_pattern = re.compile(r'%S\[([^\]]+)\]')
+        for match in s_pattern.finditer(template):
+            key = match.group(1)
+            if key in self.custom_strings:
+                custom_string = random.choice(self.custom_strings[key])
+                result = result.replace(match.group(0), custom_string, 1)
+            else:
+                # If key not found, replace with a placeholder indicating missing key
+                result = result.replace(match.group(0), f"[MISSING_KEY:{key}]", 1)
+
         return result
 
     @staticmethod
@@ -182,8 +194,9 @@ class ScenarioStep:
 class ScenarioParser:
     """Parser for scenario YAML files."""
 
-    def __init__(self):
+    def __init__(self, custom_strings: Dict[str, List[str]] = None):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.custom_strings = custom_strings or {}
 
     def load_scenario(self, scenario_path: str) -> Dict[str, Any]:
         """Load and parse a scenario YAML file."""
@@ -230,7 +243,7 @@ class ScenarioParser:
         steps = []
         for i, step_data in enumerate(steps_data):
             try:
-                step = ScenarioStep(step_data)
+                step = ScenarioStep(step_data, self.custom_strings)
                 steps.append(step)
             except Exception as e:
                 raise ValueError(f"Error parsing step {i + 1}: {e}") from e
@@ -299,8 +312,9 @@ class ScenarioParser:
 class ScenarioExecutor:
     """Executes scenario steps with asynchronous timing control."""
 
-    def __init__(self, otlp_sender):
+    def __init__(self, otlp_sender, custom_strings: Dict[str, List[str]] = None):
         self.otlp_sender = otlp_sender
+        self.custom_strings = custom_strings or {}
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.scenario_start_time = None
         self.step_threads = []

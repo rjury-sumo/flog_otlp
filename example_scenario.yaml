@@ -6,7 +6,7 @@ steps:
   # Filter for GET requests and successful responses
   - start_time: "0s"
     interval: "5s"
-    iterations: 60
+    iterations: 30
     parameters:
       format: "json"
       number: 100
@@ -47,7 +47,7 @@ steps:
 
   # Phase 3: Recovery period with warning logs - start at 2 minutes, run 2 times every 15 seconds
   # Filter for warning messages and recovery indicators, with data anonymization
-  - start_time: "2m"
+  - start_time: "90s"
     interval: "15s"
     iterations: 2
     parameters:
@@ -66,25 +66,6 @@ steps:
     filters:
       - "(?i)warn|warning"            # Match warning messages
       - "status.{1,3}:[34][0-9][0-9]"  # Match recovery-related events
-    replacements:
-      # Anonymize user IDs with random numbers
-      - pattern: "user[_-]?id[=:]\\d+"
-        replacement: "user_id=%n[10000,99999]"
-      # Replace IP addresses with random ones
-      - pattern: "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
-        replacement: "%n[10,192].%n[1,255].%n[1,255].%n[1,255]"
-      # Generate session tokens for authentication logs
-      - pattern: "session[_-]?token[=:]\\w+"
-        replacement: "session_token=%x[32]"
-      # Replace timestamps with current epoch time
-      - pattern: "timestamp[=:]\\d+"
-        replacement: "timestamp=%e"
-      # Add realistic recovery messages
-      - pattern: "message[=:]\"[^\"]*recovery[^\"]*\""
-        replacement: "message=\"System recovery in progress: %s\""
-      # Generate correlation IDs for distributed tracing
-      - pattern: "correlation[_-]?id[=:]\\w+"
-        replacement: "correlation_id=%g"
-      # Replace trace IDs with GUIDs
-      - pattern: "trace[_-]?id[=:]\\w+"
-        replacement: "trace_id=%g"
+    # replacements:
+    #   - pattern: "\"request\": \"/integrate\""
+    #     replacement: "\"request\": \"/%S[services]/%S[actions]\""

@@ -2,11 +2,51 @@
 
 import argparse
 import sys
+from pathlib import Path
+from typing import Dict, List
+
+import yaml
 
 from .logging_config import setup_logging
 from .parser import parse_key_value_pairs
 from .scenario import ScenarioExecutor, ScenarioParser
 from .sender import OTLPLogSender
+
+
+def load_strings_file(strings_file_path: str) -> Dict[str, List[str]]:
+    """Load and validate strings file containing custom string arrays."""
+    strings_file = Path(strings_file_path)
+
+    if not strings_file.exists():
+        raise FileNotFoundError(f"Strings file not found: {strings_file_path}")
+
+    try:
+        with open(strings_file, 'r', encoding='utf-8') as f:
+            strings_data = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        raise ValueError(f"Invalid YAML in strings file: {e}") from e
+
+    if not isinstance(strings_data, dict):
+        raise ValueError("Strings file must contain a YAML object with string arrays")
+
+    # Validate that all values are lists of strings
+    validated_strings = {}
+    for key, value in strings_data.items():
+        if not isinstance(value, list):
+            raise ValueError(f"Key '{key}' must be a list of strings, got {type(value).__name__}")
+
+        string_list = []
+        for i, item in enumerate(value):
+            if not isinstance(item, str):
+                raise ValueError(f"Key '{key}', item {i}: expected string, got {type(item).__name__}")
+            string_list.append(item)
+
+        if not string_list:
+            raise ValueError(f"Key '{key}' must contain at least one string")
+
+        validated_strings[key] = string_list
+
+    return validated_strings
 
 
 def parse_args():
@@ -140,6 +180,11 @@ Supported log formats:
         help="Path to YAML scenario file. When specified, executes the scenario instead of single/recurring mode.",
     )
 
+    parser.add_argument(
+        "--strings-file",
+        help="Path to YAML file containing custom string arrays for %S[key] replacement tokens.",
+    )
+
     return parser.parse_args()
 
 
@@ -208,11 +253,22 @@ def main():
         logger.info("Using scenario execution mode")
         logger.info(f"Scenario file: {args.scenario}")
 
+        # Load custom strings if provided
+        custom_strings = {}
+        if args.strings_file:
+            logger.info(f"Loading custom strings from: {args.strings_file}")
+            try:
+                custom_strings = load_strings_file(args.strings_file)
+                logger.info(f"Loaded custom strings with keys: {list(custom_strings.keys())}")
+            except Exception as e:
+                logger.error(f"Failed to load strings file: {e}")
+                sys.exit(1)
+
         try:
-            scenario_parser = ScenarioParser()
+            scenario_parser = ScenarioParser(custom_strings)
             scenario = scenario_parser.load_scenario(args.scenario)
 
-            executor = ScenarioExecutor(sender)
+            executor = ScenarioExecutor(sender, custom_strings)
             success = executor.execute_scenario(scenario, scenario_parser)
         except Exception as e:
             logger.error(f"Scenario execution failed: {e}")

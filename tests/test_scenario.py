@@ -293,6 +293,93 @@ class TestScenarioStep:
         for guid in guids:
             assert re.match(guid_pattern, guid)
 
+    def test_format_replacement_variables_custom_strings(self):
+        """Test %S[key] formatting variable for custom strings."""
+        custom_strings = {
+            "names": ["Alice", "Bob", "Charlie"],
+            "cities": ["New York", "London", "Tokyo"],
+            "colors": ["red", "blue", "green"]
+        }
+        step = ScenarioStep({}, custom_strings)
+
+        # Test with valid key
+        result = step._format_replacement_variables("User %S[names] from %S[cities]")
+
+        # Should contain one of the names and one of the cities
+        contains_name = any(name in result for name in custom_strings["names"])
+        contains_city = any(city in result for city in custom_strings["cities"])
+        assert contains_name, f"Result '{result}' should contain a name from {custom_strings['names']}"
+        assert contains_city, f"Result '{result}' should contain a city from {custom_strings['cities']}"
+
+    def test_format_replacement_variables_custom_strings_missing_key(self):
+        """Test %S[key] with missing key shows placeholder."""
+        custom_strings = {"valid_key": ["value1", "value2"]}
+        step = ScenarioStep({}, custom_strings)
+
+        result = step._format_replacement_variables("Test %S[missing_key] placeholder")
+        assert "[MISSING_KEY:missing_key]" in result
+
+    def test_format_replacement_variables_custom_strings_empty(self):
+        """Test %S[key] with no custom strings."""
+        step = ScenarioStep({})  # No custom strings
+
+        result = step._format_replacement_variables("Test %S[any_key] placeholder")
+        assert "[MISSING_KEY:any_key]" in result
+
+    def test_format_replacement_variables_custom_strings_multiple_same_key(self):
+        """Test multiple %S[key] tokens with same key get different values."""
+        custom_strings = {"items": ["apple", "banana", "cherry", "date", "elderberry"]}
+        step = ScenarioStep({}, custom_strings)
+
+        # Generate multiple results to test randomness
+        results = []
+        for _ in range(10):
+            result = step._format_replacement_variables("%S[items] and %S[items]")
+            results.append(result)
+
+        # Just verify it's using valid items
+        for result in results:
+            for item in custom_strings["items"]:
+                if item in result:
+                    break
+            else:
+                raise AssertionError(f"Result '{result}' should contain at least one item from {custom_strings['items']}")
+
+    def test_scenario_step_with_custom_strings(self):
+        """Test ScenarioStep initialization with custom strings."""
+        custom_strings = {
+            "users": ["admin", "guest", "user123"],
+            "actions": ["login", "logout", "view"]
+        }
+        step = ScenarioStep({"start_time": "0s"}, custom_strings)
+        assert step.custom_strings == custom_strings
+
+    def test_apply_replacements_with_custom_strings(self):
+        """Test complete replacement flow with custom strings."""
+        custom_strings = {
+            "users": ["alice", "bob", "charlie"],
+            "departments": ["engineering", "marketing", "sales"]
+        }
+        replacements = [
+            {"pattern": r"user=\w+", "replacement": "user=%S[users]"},
+            {"pattern": r"dept=\w+", "replacement": "dept=%S[departments]"},
+            {"pattern": r"id=\d+", "replacement": "id=%n[1000,9999]"}
+        ]
+        step = ScenarioStep({"replacements": replacements}, custom_strings)
+
+        log_line = "Login user=testuser dept=testdept id=123 successful"
+        result = step.apply_replacements(log_line)
+
+        # Should contain valid users and departments
+        contains_user = any(user in result for user in custom_strings["users"])
+        contains_dept = any(dept in result for dept in custom_strings["departments"])
+
+        assert contains_user, f"Result '{result}' should contain a user from {custom_strings['users']}"
+        assert contains_dept, f"Result '{result}' should contain a department from {custom_strings['departments']}"
+        assert "testuser" not in result  # Original should be replaced
+        assert "testdept" not in result  # Original should be replaced
+        assert "123" not in result      # Original ID should be replaced
+
     def test_format_replacement_variables_multiple(self):
         """Test multiple formatting variables in one template."""
         step = ScenarioStep({})
