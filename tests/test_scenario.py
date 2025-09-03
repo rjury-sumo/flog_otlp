@@ -90,7 +90,9 @@ class TestScenarioStep:
 
     def test_matches_filters_multiple_patterns(self):
         """Test OR logic with multiple regex patterns."""
-        step = ScenarioStep({"filters": [r"user.*login", r"POST.*api", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"]})
+        step = ScenarioStep(
+            {"filters": [r"user.*login", r"POST.*api", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"]}
+        )
 
         # Should match user login pattern
         assert step.matches_filters("user john login successful") is True
@@ -121,7 +123,7 @@ class TestScenarioStep:
         """Test that replacements are stored and compiled correctly."""
         replacements = [
             {"pattern": r"user_(\d+)", "replacement": "user_%n[1000,9999]"},
-            {"pattern": r"timestamp:\d+", "replacement": "timestamp:%e"}
+            {"pattern": r"timestamp:\d+", "replacement": "timestamp:%e"},
         ]
         step = ScenarioStep({"replacements": replacements})
         assert step.replacements == replacements
@@ -150,7 +152,7 @@ class TestScenarioStep:
         """Test replacements with static text."""
         replacements = [
             {"pattern": r"user_\d+", "replacement": "user_anonymous"},
-            {"pattern": r"password=\w+", "replacement": "password=***"}
+            {"pattern": r"password=\w+", "replacement": "password=***"},
         ]
         step = ScenarioStep({"replacements": replacements})
 
@@ -183,6 +185,7 @@ class TestScenarioStep:
     def test_format_replacement_variables_epoch(self):
         """Test %e formatting variable for epoch time."""
         import time
+
         before_time = int(time.time())
 
         step = ScenarioStep({})
@@ -202,7 +205,7 @@ class TestScenarioStep:
         assert result.startswith("id_")
         hex_part = result[3:]
         assert len(hex_part) == 8
-        assert all(c in '0123456789abcdef' for c in hex_part)
+        assert all(c in "0123456789abcdef" for c in hex_part)
 
     def test_format_replacement_variables_hex_uppercase(self):
         """Test %X[n] formatting variable for uppercase hexadecimal."""
@@ -211,7 +214,7 @@ class TestScenarioStep:
         assert result.startswith("ID_")
         hex_part = result[3:]
         assert len(hex_part) == 4
-        assert all(c in '0123456789ABCDEF' for c in hex_part)
+        assert all(c in "0123456789ABCDEF" for c in hex_part)
 
     def test_format_replacement_variables_hex_different_lengths(self):
         """Test hex formatting variables with different lengths."""
@@ -221,13 +224,13 @@ class TestScenarioStep:
         result2 = step._format_replacement_variables("short_%x[2]")
         hex_part2 = result2[6:]
         assert len(hex_part2) == 2
-        assert all(c in '0123456789abcdef' for c in hex_part2)
+        assert all(c in "0123456789abcdef" for c in hex_part2)
 
         # Test 12-character uppercase hex
         result12 = step._format_replacement_variables("long_%X[12]")
         hex_part12 = result12[5:]
         assert len(hex_part12) == 12
-        assert all(c in '0123456789ABCDEF' for c in hex_part12)
+        assert all(c in "0123456789ABCDEF" for c in hex_part12)
 
     def test_format_replacement_variables_random_string(self):
         """Test %r[n] formatting variable for random strings."""
@@ -238,6 +241,7 @@ class TestScenarioStep:
         assert len(random_part) == 8
         # Should contain only letters and digits
         import string
+
         valid_chars = string.ascii_letters + string.digits
         assert all(c in valid_chars for c in random_part)
 
@@ -250,22 +254,23 @@ class TestScenarioStep:
         guid_part = result[11:]  # Remove "request_id=" prefix
 
         # GUID should match pattern: 8-4-4-4-12 hex digits
-        guid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        guid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         import re
+
         assert re.match(guid_pattern, guid_part)
 
         # Check specific format components
-        parts = guid_part.split('-')
+        parts = guid_part.split("-")
         assert len(parts) == 5
-        assert len(parts[0]) == 8   # First part: 8 digits
-        assert len(parts[1]) == 4   # Second part: 4 digits
-        assert len(parts[2]) == 4   # Third part: 4 digits
-        assert len(parts[3]) == 4   # Fourth part: 4 digits
+        assert len(parts[0]) == 8  # First part: 8 digits
+        assert len(parts[1]) == 4  # Second part: 4 digits
+        assert len(parts[2]) == 4  # Third part: 4 digits
+        assert len(parts[3]) == 4  # Fourth part: 4 digits
         assert len(parts[4]) == 12  # Fifth part: 12 digits
 
         # All parts should be lowercase hex
         for part in parts:
-            assert all(c in '0123456789abcdef' for c in part)
+            assert all(c in "0123456789abcdef" for c in part)
 
     def test_format_replacement_variables_guid_multiple(self):
         """Test multiple GUID generation produces unique values."""
@@ -282,8 +287,9 @@ class TestScenarioStep:
         assert len(set(guids)) == len(guids)
 
         # All should match GUID format
-        guid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        guid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         import re
+
         for guid in guids:
             assert re.match(guid_pattern, guid)
 
@@ -292,7 +298,7 @@ class TestScenarioStep:
         step = ScenarioStep({})
         result = step._format_replacement_variables("user_%n[1,100]_session_%r[4]_time_%e")
 
-        parts = result.split('_')
+        parts = result.split("_")
         assert parts[0] == "user"
         assert 1 <= int(parts[1]) <= 100
         assert parts[2] == "session"
@@ -305,7 +311,7 @@ class TestScenarioStep:
         replacements = [
             {"pattern": r"user_id=\d+", "replacement": "user_id=%n[1000,9999]"},
             {"pattern": r"session_token=\w+", "replacement": "session_token=%r[16]"},
-            {"pattern": r"message=.*", "replacement": "message=%s"}
+            {"pattern": r"message=.*", "replacement": "message=%s"},
         ]
         step = ScenarioStep({"replacements": replacements})
 
@@ -333,31 +339,31 @@ class TestScenarioParser:
                     "start_time": "0s",
                     "interval": "30s",
                     "iterations": 2,
-                    "parameters": {"format": "json", "number": 50}
+                    "parameters": {"format": "json", "number": 50},
                 },
                 {
                     "start_time": "60s",
                     "interval": "45s",
                     "iterations": 3,
-                    "parameters": {"format": "apache_common", "number": 100}
-                }
-            ]
+                    "parameters": {"format": "apache_common", "number": 100},
+                },
+            ],
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(scenario_data, f)
             f.flush()
 
             parser = ScenarioParser()
             scenario = parser.load_scenario(f.name)
 
-            assert scenario['name'] == "Test Scenario"
-            assert scenario['description'] == "Test description"
-            assert len(scenario['steps']) == 2
-            assert scenario['steps'][0].start_time_seconds == 0.0
-            assert scenario['steps'][0].iterations == 2
-            assert scenario['steps'][1].start_time_seconds == 60.0
-            assert scenario['steps'][1].iterations == 3
+            assert scenario["name"] == "Test Scenario"
+            assert scenario["description"] == "Test description"
+            assert len(scenario["steps"]) == 2
+            assert scenario["steps"][0].start_time_seconds == 0.0
+            assert scenario["steps"][0].iterations == 2
+            assert scenario["steps"][1].start_time_seconds == 60.0
+            assert scenario["steps"][1].iterations == 3
 
     def test_load_scenario_file_not_found(self):
         """Test error when scenario file doesn't exist."""
@@ -367,7 +373,7 @@ class TestScenarioParser:
 
     def test_load_scenario_invalid_yaml(self):
         """Test error when YAML is invalid."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content:\n  - bad indentation")
             f.flush()
 
@@ -379,7 +385,7 @@ class TestScenarioParser:
         """Test error when scenario is missing name."""
         scenario_data = {"steps": [{"start_time": "0s"}]}
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(scenario_data, f)
             f.flush()
 
@@ -391,7 +397,7 @@ class TestScenarioParser:
         """Test error when scenario is missing steps."""
         scenario_data = {"name": "Test"}
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(scenario_data, f)
             f.flush()
 
@@ -403,7 +409,7 @@ class TestScenarioParser:
         """Test error when steps array is empty."""
         scenario_data = {"name": "Test", "steps": []}
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(scenario_data, f)
             f.flush()
 
@@ -421,11 +427,26 @@ class TestScenarioParser:
             "no_loop": True,
             "delay_flog": "0.5s",
             "rate": 10,
-            "bytes": 1024
+            "bytes": 1024,
         }
 
         cmd = parser.build_flog_command_from_parameters(params)
-        expected = ["flog", "-f", "json", "-n", "100", "-s", "30s", "--no-loop", "-d", "0.5s", "-r", "10", "-p", "1024"]
+        expected = [
+            "flog",
+            "-f",
+            "json",
+            "-n",
+            "100",
+            "-s",
+            "30s",
+            "--no-loop",
+            "-d",
+            "0.5s",
+            "-r",
+            "10",
+            "-p",
+            "1024",
+        ]
         assert cmd == expected
 
     def test_build_flog_command_minimal_parameters(self):
@@ -439,7 +460,7 @@ class TestScenarioParser:
         steps = [
             ScenarioStep({"start_time": "0s", "interval": "30s", "iterations": 2}),
             ScenarioStep({"start_time": "30s", "interval": "60s", "iterations": 1}),
-            ScenarioStep({"start_time": "60s", "interval": "30s", "iterations": 3})
+            ScenarioStep({"start_time": "60s", "interval": "30s", "iterations": 3}),
         ]
 
         parser = ScenarioParser()
@@ -464,4 +485,3 @@ class TestScenarioExecutor:
         executor = ScenarioExecutor(mock_sender)
         assert executor.otlp_sender == mock_sender
         assert executor.logger is not None
-

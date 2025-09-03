@@ -29,6 +29,7 @@ class ScenarioStep:
         self.compiled_filters = []
         if self.filters:
             import re
+
             for filter_pattern in self.filters:
                 try:
                     self.compiled_filters.append(re.compile(filter_pattern))
@@ -39,14 +40,25 @@ class ScenarioStep:
         self.compiled_replacements = []
         if self.replacements:
             import re
+
             for replacement in self.replacements:
-                if not isinstance(replacement, dict) or "pattern" not in replacement or "replacement" not in replacement:
-                    raise ValueError(f"Invalid replacement format: {replacement}. Expected dict with 'pattern' and 'replacement' keys.")
+                if (
+                    not isinstance(replacement, dict)
+                    or "pattern" not in replacement
+                    or "replacement" not in replacement
+                ):
+                    raise ValueError(
+                        f"Invalid replacement format: {replacement}. Expected dict with 'pattern' and 'replacement' keys."
+                    )
                 try:
                     compiled_pattern = re.compile(replacement["pattern"])
-                    self.compiled_replacements.append((compiled_pattern, replacement["replacement"]))
+                    self.compiled_replacements.append(
+                        (compiled_pattern, replacement["replacement"])
+                    )
                 except re.error as e:
-                    raise ValueError(f"Invalid regex replacement pattern '{replacement['pattern']}': {e}") from e
+                    raise ValueError(
+                        f"Invalid regex replacement pattern '{replacement['pattern']}': {e}"
+                    ) from e
 
     def matches_filters(self, log_line: str) -> bool:
         """Check if a log line matches any of the regex filters."""
@@ -83,7 +95,8 @@ class ScenarioStep:
 
         # %n[x,y] - Random integer between x and y
         import re
-        n_pattern = re.compile(r'%n\[(\d+),(\d+)\]')
+
+        n_pattern = re.compile(r"%n\[(\d+),(\d+)\]")
         for match in n_pattern.finditer(template):
             min_val = int(match.group(1))
             max_val = int(match.group(2))
@@ -96,43 +109,43 @@ class ScenarioStep:
             result = result.replace("%e", epoch_time)
 
         # %x[n] - Lowercase hexadecimal with length n
-        hex_pattern = re.compile(r'%x\[(\d+)\]')
+        hex_pattern = re.compile(r"%x\[(\d+)\]")
         for match in hex_pattern.finditer(template):
             length = int(match.group(1))
-            max_value = (16 ** length) - 1
-            format_str = f'0{length}x'
+            max_value = (16**length) - 1
+            format_str = f"0{length}x"
             hex_value = format(random.randint(0, max_value), format_str)
             result = result.replace(match.group(0), hex_value, 1)
 
         # %X[n] - Uppercase hexadecimal with length n
-        hex_upper_pattern = re.compile(r'%X\[(\d+)\]')
+        hex_upper_pattern = re.compile(r"%X\[(\d+)\]")
         for match in hex_upper_pattern.finditer(template):
             length = int(match.group(1))
-            max_value = (16 ** length) - 1
-            format_str = f'0{length}X'
+            max_value = (16**length) - 1
+            format_str = f"0{length}X"
             hex_value = format(random.randint(0, max_value), format_str)
             result = result.replace(match.group(0), hex_value, 1)
 
         # %r[n] - Random string of letters and digits of length n
-        r_pattern = re.compile(r'%r\[(\d+)\]')
+        r_pattern = re.compile(r"%r\[(\d+)\]")
         for match in r_pattern.finditer(template):
             length = int(match.group(1))
             chars = string.ascii_letters + string.digits
-            random_string = ''.join(random.choice(chars) for _ in range(length))
+            random_string = "".join(random.choice(chars) for _ in range(length))
             result = result.replace(match.group(0), random_string, 1)
 
         # %g - GUID format (8-4-4-4-12 hexadecimal)
         if "%g" in result:
             # Generate 32 random hex digits
-            hex_chars = '0123456789abcdef'
+            hex_chars = "0123456789abcdef"
             guid_parts = [
-                ''.join(random.choice(hex_chars) for _ in range(8)),   # 8 digits
-                ''.join(random.choice(hex_chars) for _ in range(4)),   # 4 digits
-                ''.join(random.choice(hex_chars) for _ in range(4)),   # 4 digits
-                ''.join(random.choice(hex_chars) for _ in range(4)),   # 4 digits
-                ''.join(random.choice(hex_chars) for _ in range(12))   # 12 digits
+                "".join(random.choice(hex_chars) for _ in range(8)),  # 8 digits
+                "".join(random.choice(hex_chars) for _ in range(4)),  # 4 digits
+                "".join(random.choice(hex_chars) for _ in range(4)),  # 4 digits
+                "".join(random.choice(hex_chars) for _ in range(4)),  # 4 digits
+                "".join(random.choice(hex_chars) for _ in range(12)),  # 12 digits
             ]
-            guid = '-'.join(guid_parts)
+            guid = "-".join(guid_parts)
             result = result.replace("%g", guid)
 
         return result
@@ -146,7 +159,7 @@ class ScenarioStep:
         duration_str = str(duration_str).strip().lower()
 
         # Match patterns like "5m", "30s", "1h", "90"
-        match = re.match(r'^(\d+(?:\.\d+)?)\s*([smh]?)$', duration_str)
+        match = re.match(r"^(\d+(?:\.\d+)?)\s*([smh]?)$", duration_str)
         if not match:
             raise ValueError(f"Invalid duration format: {duration_str}")
 
@@ -154,10 +167,10 @@ class ScenarioStep:
         value = float(value)
 
         unit_multipliers = {
-            '': 1,      # default to seconds if no unit
-            's': 1,     # seconds
-            'm': 60,    # minutes
-            'h': 3600,  # hours
+            "": 1,  # default to seconds if no unit
+            "s": 1,  # seconds
+            "m": 60,  # minutes
+            "h": 3600,  # hours
         }
 
         if unit not in unit_multipliers:
@@ -176,13 +189,13 @@ class ScenarioParser:
         """Load and parse a scenario YAML file."""
         scenario_data = self._load_yaml_file(scenario_path)
         self._validate_scenario_structure(scenario_data)
-        steps = self._parse_scenario_steps(scenario_data['steps'])
+        steps = self._parse_scenario_steps(scenario_data["steps"])
         self._validate_step_timing(steps)
 
         return {
-            'name': scenario_data['name'],
-            'description': scenario_data.get('description', ''),
-            'steps': steps
+            "name": scenario_data["name"],
+            "description": scenario_data.get("description", ""),
+            "steps": steps,
         }
 
     def _load_yaml_file(self, scenario_path: str) -> Dict[str, Any]:
@@ -193,7 +206,7 @@ class ScenarioParser:
             raise FileNotFoundError(f"Scenario file not found: {scenario_path}")
 
         try:
-            with open(scenario_file, 'r', encoding='utf-8') as f:
+            with open(scenario_file, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in scenario file: {e}") from e
@@ -203,13 +216,13 @@ class ScenarioParser:
         if not isinstance(scenario_data, dict):
             raise ValueError("Scenario file must contain a YAML object")
 
-        if 'name' not in scenario_data:
+        if "name" not in scenario_data:
             raise ValueError("Scenario must have a 'name' field")
 
-        if 'steps' not in scenario_data or not isinstance(scenario_data['steps'], list):
+        if "steps" not in scenario_data or not isinstance(scenario_data["steps"], list):
             raise ValueError("Scenario must have a 'steps' array")
 
-        if not scenario_data['steps']:
+        if not scenario_data["steps"]:
             raise ValueError("Scenario must have at least one step")
 
     def _parse_scenario_steps(self, steps_data: List[Dict[str, Any]]) -> List[ScenarioStep]:
@@ -228,7 +241,9 @@ class ScenarioParser:
         steps.sort(key=lambda s: s.start_time_seconds)
         for i, step in enumerate(steps):
             if step.start_time_seconds < 0:
-                raise ValueError(f"Step {i + 1} has negative start_time: {step.start_time_seconds}s")
+                raise ValueError(
+                    f"Step {i + 1} has negative start_time: {step.start_time_seconds}s"
+                )
 
     def build_flog_command_from_parameters(self, parameters: Dict[str, Any]) -> List[str]:
         """Build flog command from step parameters."""
@@ -271,7 +286,9 @@ class ScenarioParser:
         max_end_time = 0
         for step in steps:
             # Calculate when the last iteration of this step will complete
-            last_iteration_start = step.start_time_seconds + (step.iterations - 1) * step.interval_seconds
+            last_iteration_start = (
+                step.start_time_seconds + (step.iterations - 1) * step.interval_seconds
+            )
             # Estimate completion time (assume each iteration takes at least interval time)
             step_end_time = last_iteration_start + step.interval_seconds
             max_end_time = max(max_end_time, step_end_time)
@@ -291,9 +308,9 @@ class ScenarioExecutor:
 
     def execute_scenario(self, scenario: Dict[str, Any], scenario_parser: ScenarioParser) -> bool:
         """Execute a complete scenario with asynchronous step execution."""
-        scenario_name = scenario['name']
-        scenario_description = scenario['description']
-        steps = scenario['steps']
+        scenario_name = scenario["name"]
+        scenario_description = scenario["description"]
+        steps = scenario["steps"]
 
         self.scenario_start_time = datetime.now(timezone.utc)
         self.logger.info(f"Starting scenario: {scenario_name}")
@@ -341,12 +358,15 @@ class ScenarioExecutor:
 
     def _schedule_step(self, step_number: int, step: ScenarioStep, scenario_parser: ScenarioParser):
         """Schedule a step for asynchronous execution."""
+
         def step_worker():
             try:
                 # Wait for the step start time
                 time_to_wait = step.start_time_seconds
                 if time_to_wait > 0:
-                    self.logger.info(f"Step {step_number} scheduled to start in {time_to_wait:.1f}s")
+                    self.logger.info(
+                        f"Step {step_number} scheduled to start in {time_to_wait:.1f}s"
+                    )
                     time.sleep(time_to_wait)
 
                 if self.stop_event.is_set():
@@ -371,12 +391,16 @@ class ScenarioExecutor:
         self.step_threads.append(thread)
         thread.start()
 
-    def _execute_step_iteration(self, step_number: int, iteration: int, step: ScenarioStep, scenario_parser: ScenarioParser):
+    def _execute_step_iteration(
+        self, step_number: int, iteration: int, step: ScenarioStep, scenario_parser: ScenarioParser
+    ):
         """Execute a single iteration of a scenario step."""
         iteration_start = datetime.now(timezone.utc)
         elapsed_since_start = (iteration_start - self.scenario_start_time).total_seconds()
 
-        self.logger.info(f"Executing step {step_number}, iteration {iteration}/{step.iterations} at {iteration_start.strftime('%H:%M:%S UTC')} (T+{elapsed_since_start:.1f}s)")
+        self.logger.info(
+            f"Executing step {step_number}, iteration {iteration}/{step.iterations} at {iteration_start.strftime('%H:%M:%S UTC')} (T+{elapsed_since_start:.1f}s)"
+        )
 
         # Build flog command from step parameters
         flog_cmd = scenario_parser.build_flog_command_from_parameters(step.parameters)
@@ -392,18 +416,26 @@ class ScenarioExecutor:
         step_sender = self._create_step_sender(step.parameters)
 
         # Execute the step iteration with filtering
-        success, log_count, filtered_count = self._process_flog_output_with_filters(step_sender, flog_cmd, step)
+        success, log_count, filtered_count = self._process_flog_output_with_filters(
+            step_sender, flog_cmd, step
+        )
 
         iteration_end = datetime.now(timezone.utc)
         iteration_elapsed = (iteration_end - iteration_start).total_seconds()
 
         if success:
             if step.filters:
-                self.logger.info(f"Step {step_number}.{iteration} completed in {iteration_elapsed:.1f}s ({log_count} logs sent, {filtered_count} filtered out)")
+                self.logger.info(
+                    f"Step {step_number}.{iteration} completed in {iteration_elapsed:.1f}s ({log_count} logs sent, {filtered_count} filtered out)"
+                )
             else:
-                self.logger.info(f"Step {step_number}.{iteration} completed in {iteration_elapsed:.1f}s ({log_count} logs)")
+                self.logger.info(
+                    f"Step {step_number}.{iteration} completed in {iteration_elapsed:.1f}s ({log_count} logs)"
+                )
         else:
-            self.logger.error(f"Step {step_number}.{iteration} failed after {iteration_elapsed:.1f}s")
+            self.logger.error(
+                f"Step {step_number}.{iteration} failed after {iteration_elapsed:.1f}s"
+            )
 
     def _process_flog_output_with_filters(self, sender, flog_cmd, step):
         """Execute flog and process output with optional regex filtering."""
@@ -438,7 +470,9 @@ class ScenarioExecutor:
                         processed_line = step.apply_replacements(line.strip())
 
                         # Detailed log line processing at DEBUG level
-                        self.logger.debug(f"Processing line {sent_count + 1}: {processed_line[:100]}...")
+                        self.logger.debug(
+                            f"Processing line {sent_count + 1}: {processed_line[:100]}..."
+                        )
 
                         # Parse the processed log line
                         log_entry = sender.parse_flog_line(processed_line)
@@ -455,7 +489,9 @@ class ScenarioExecutor:
                             time.sleep(sender.delay)
                     else:
                         filtered_count += 1
-                        self.logger.debug(f"Filtered out line {line_count}: {line.strip()[:100]}...")
+                        self.logger.debug(
+                            f"Filtered out line {line_count}: {line.strip()[:100]}..."
+                        )
 
             # Wait for process to complete
             process.wait()
@@ -467,7 +503,9 @@ class ScenarioExecutor:
                 )
                 return False, sent_count, filtered_count
 
-            self.logger.debug(f"Completed processing {line_count} total lines, {sent_count} sent, {filtered_count} filtered")
+            self.logger.debug(
+                f"Completed processing {line_count} total lines, {sent_count} sent, {filtered_count} filtered"
+            )
             return True, sent_count, filtered_count
 
         except FileNotFoundError:
@@ -522,4 +560,3 @@ class ScenarioExecutor:
             step_sender.endpoint = str(parameters["otlp_endpoint"])
 
         return step_sender
-
