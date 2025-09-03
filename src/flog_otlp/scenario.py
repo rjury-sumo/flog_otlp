@@ -19,6 +19,27 @@ class ScenarioStep:
         self.interval_seconds = self._parse_duration(step_data.get("interval", "10s"))
         self.iterations = step_data.get("iterations", 1)
         self.parameters = step_data.get("parameters", {})
+        self.filters = step_data.get("filters", [])
+
+        # Compile regex patterns for efficiency
+        self.compiled_filters = []
+        if self.filters:
+            import re
+            for filter_pattern in self.filters:
+                try:
+                    self.compiled_filters.append(re.compile(filter_pattern))
+                except re.error as e:
+                    raise ValueError(f"Invalid regex filter pattern '{filter_pattern}': {e}") from e
+
+    def matches_filters(self, log_line: str) -> bool:
+        """Check if a log line matches any of the regex filters."""
+        if not self.compiled_filters:
+            return True  # No filters means all logs pass through
+
+        for pattern in self.compiled_filters:
+            if pattern.search(log_line):
+                return True
+        return False
 
     @staticmethod
     def _parse_duration(duration_str: str) -> float:
@@ -268,20 +289,100 @@ class ScenarioExecutor:
         self.logger.info(f"Step {step_number}.{iteration} flog command: {' '.join(flog_cmd)}")
         if step.parameters:
             self.logger.info(f"Step {step_number}.{iteration} parameters: {step.parameters}")
+        if step.filters:
+            self.logger.info(f"Step {step_number}.{iteration} regex filters: {step.filters}")
 
-        # Create a temporary sender with step-specific parameters
+        # Create a temporary sender with step-specific parameters and filtering
         step_sender = self._create_step_sender(step.parameters)
 
-        # Execute the step iteration
-        success, log_count = step_sender.process_flog_output(flog_cmd)
+        # Execute the step iteration with filtering
+        success, log_count, filtered_count = self._process_flog_output_with_filters(step_sender, flog_cmd, step)
 
         iteration_end = datetime.now(timezone.utc)
         iteration_elapsed = (iteration_end - iteration_start).total_seconds()
 
         if success:
-            self.logger.info(f"Step {step_number}.{iteration} completed in {iteration_elapsed:.1f}s ({log_count} logs)")
+            if step.filters:
+                self.logger.info(f"Step {step_number}.{iteration} completed in {iteration_elapsed:.1f}s ({log_count} logs sent, {filtered_count} filtered out)")
+            else:
+                self.logger.info(f"Step {step_number}.{iteration} completed in {iteration_elapsed:.1f}s ({log_count} logs)")
         else:
             self.logger.error(f"Step {step_number}.{iteration} failed after {iteration_elapsed:.1f}s")
+
+    def _process_flog_output_with_filters(self, sender, flog_cmd, step):
+        """Execute flog and process output with optional regex filtering."""
+        import subprocess
+
+        self.logger.debug(f"Executing with filtering: {' '.join(flog_cmd)}")
+        self.logger.debug(f"Sending logs to: {sender.endpoint}")
+
+        try:
+            # Start flog process
+            process = subprocess.Popen(
+                flog_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            line_count = 0
+            sent_count = 0
+            filtered_count = 0
+
+            # Process each line of output with filtering
+            for line in iter(process.stdout.readline, ""):
+                if line.strip():  # Skip empty lines
+                    line_count += 1
+
+                    # Apply regex filters if present
+                    if step.matches_filters(line.strip()):
+                        # Detailed log line processing at DEBUG level
+                        self.logger.debug(f"Processing line {sent_count + 1}: {line.strip()[:100]}...")
+
+                        # Parse the log line
+                        log_entry = sender.parse_flog_line(line)
+
+                        # Create OTLP payload
+                        otlp_payload = sender.create_otlp_payload(log_entry)
+
+                        # Send to endpoint
+                        sender.send_log(otlp_payload)
+                        sent_count += 1
+
+                        # Configurable delay to avoid overwhelming the endpoint
+                        if sender.delay > 0:
+                            time.sleep(sender.delay)
+                    else:
+                        filtered_count += 1
+                        self.logger.debug(f"Filtered out line {line_count}: {line.strip()[:100]}...")
+
+            # Wait for process to complete
+            process.wait()
+
+            if process.returncode != 0:
+                stderr_output = process.stderr.read()
+                self.logger.error(
+                    f"flog process failed with return code {process.returncode}: {stderr_output}"
+                )
+                return False, sent_count, filtered_count
+
+            self.logger.debug(f"Completed processing {line_count} total lines, {sent_count} sent, {filtered_count} filtered")
+            return True, sent_count, filtered_count
+
+        except FileNotFoundError:
+            self.logger.error("'flog' command not found. Please install flog first.")
+            self.logger.error("Installation: go install github.com/mingrammer/flog@latest")
+            return False, 0, 0
+        except KeyboardInterrupt:
+            self.logger.warning("Interrupted by user")
+            if "process" in locals():
+                process.terminate()
+            return False, 0, 0
+        except Exception as e:
+            self.logger.error(f"Unexpected error: {e}")
+            return False, 0, 0
 
     def _create_step_sender(self, parameters: Dict[str, Any]):
         """Create an OTLP sender with step-specific parameters."""

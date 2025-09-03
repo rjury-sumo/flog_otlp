@@ -1,8 +1,9 @@
-name: "Example Log Pattern Scenario"
-description: "Demonstrates mixed log levels over time with asynchronous execution - info logs, then error logs, then recovery"
+name: "Example Log Pattern Scenario with Filtering"
+description: "Demonstrates mixed log levels over time with asynchronous execution and regex filtering - info logs, then error logs, then recovery"
 
 steps:
   # Phase 1: Normal operations with info logs - run 60 times every 5 seconds
+  # Filter for GET requests and successful responses
   - start_time: "0s"
     interval: "5s"
     iterations: 60
@@ -17,8 +18,12 @@ steps:
       otlp_attributes:
         - "environment=test"
         - "scenario=example"
+    filters:
+      - "status.{1,3}:[23][0-9][0-9]"                # Match successful requests (200-300)
+      - "info.*login.*success"        # Match successful login info messages
 
-  # Phase 2: Error condition with higher log volume - start at 1 minutes, run 5 times every 5 seconds
+  # Phase 2: Error condition with higher log volume - start at 1 minutes, run 5 times every 5 seconds  
+  # Filter for error conditions and failed requests
   - start_time: "1m"
     interval: "5s"
     iterations: 5
@@ -35,8 +40,13 @@ steps:
         - "environment=test"
         - "scenario=example"
         - "alert_state=triggered"
+    filters:
+      - "(?i)error|exception|fail|fatal"    # Match error/exception/failure messages
+      - "[45][0-9][0-9]"              # Match 4xx/5xx HTTP status codes
+      - "timeout|connection.*lost"    # Match timeout or connection issues
 
   # Phase 3: Recovery period with warning logs - start at 2 minutes, run 2 times every 15 seconds
+  # Filter for warning messages and recovery indicators
   - start_time: "2m"
     interval: "15s"
     iterations: 2
@@ -53,3 +63,6 @@ steps:
         - "environment=test"
         - "scenario=example"
         - "alert_state=recovering"
+    filters:
+      - "(?i)warn|warning"            # Match warning messages
+      - "status.{1,3}:[34][0-9][0-9]"  # Match recovery-related events

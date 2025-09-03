@@ -64,6 +64,59 @@ class TestScenarioStep:
         step = ScenarioStep({"parameters": params})
         assert step.parameters == params
 
+    def test_filters_stored(self):
+        """Test that regex filters are stored and compiled correctly."""
+        filters = [r"ERROR", r"WARN.*database"]
+        step = ScenarioStep({"filters": filters})
+        assert step.filters == filters
+        assert len(step.compiled_filters) == 2
+
+    def test_invalid_regex_filter(self):
+        """Test error handling for invalid regex patterns."""
+        with pytest.raises(ValueError, match="Invalid regex filter pattern"):
+            ScenarioStep({"filters": [r"[unclosed"]})
+
+    def test_matches_filters_no_filters(self):
+        """Test that logs pass through when no filters are defined."""
+        step = ScenarioStep({})
+        assert step.matches_filters("any log line") is True
+
+    def test_matches_filters_with_match(self):
+        """Test that matching logs pass through filters."""
+        step = ScenarioStep({"filters": [r"ERROR", r"status.*500"]})
+        assert step.matches_filters("ERROR: Connection failed") is True
+        assert step.matches_filters("status code 500") is True
+        assert step.matches_filters("INFO: All good") is False
+
+    def test_matches_filters_multiple_patterns(self):
+        """Test OR logic with multiple regex patterns."""
+        step = ScenarioStep({"filters": [r"user.*login", r"POST.*api", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"]})
+
+        # Should match user login pattern
+        assert step.matches_filters("user john login successful") is True
+
+        # Should match POST API pattern
+        assert step.matches_filters("POST /api/users") is True
+
+        # Should match IP address pattern
+        assert step.matches_filters("Request from 192.168.1.1") is True
+
+        # Should not match any pattern
+        assert step.matches_filters("GET /static/image.png") is False
+
+    def test_matches_filters_case_sensitive(self):
+        """Test that regex matching is case-sensitive by default."""
+        step = ScenarioStep({"filters": [r"Error"]})
+        assert step.matches_filters("Error occurred") is True
+        assert step.matches_filters("error occurred") is False
+
+    def test_matches_filters_case_insensitive(self):
+        """Test case-insensitive regex patterns."""
+        step = ScenarioStep({"filters": [r"(?i)error"]})
+        assert step.matches_filters("Error occurred") is True
+        assert step.matches_filters("error occurred") is True
+        assert step.matches_filters("ERROR occurred") is True
+
 
 class TestScenarioParser:
     """Tests for ScenarioParser class."""

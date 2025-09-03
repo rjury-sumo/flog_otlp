@@ -2,11 +2,58 @@
 
 A Python package that generates realistic log data using [flog](https://github.com/mingrammer/flog) and sends it to OpenTelemetry Protocol (OTLP) endpoints. Perfect for testing log pipelines, observability systems, and OTLP collectors.
 
+- [flog-otlp](#flog-otlp)
+  - [About flog-otlp](#about-flog-otlp)
+  - [Notes about Sumo Logic integration](#notes-about-sumo-logic-integration)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+    - [Install flog-otlp Package](#install-flog-otlp-package)
+    - [Install flog Tool (Required)](#install-flog-tool-required)
+  - [Usage](#usage)
+    - [Single Execution Examples](#single-execution-examples)
+    - [Development Usage (Without Installation)](#development-usage-without-installation)
+  - [Scenario Mode](#scenario-mode)
+    - [Quick Start](#quick-start)
+    - [YAML Scenario Format](#yaml-scenario-format)
+    - [Scenario Features](#scenario-features)
+    - [Scenario Parameters](#scenario-parameters)
+    - [Time Format Support](#time-format-support)
+    - [Regex Filtering Support](#regex-filtering-support)
+    - [Real-World Scenario Examples](#real-world-scenario-examples)
+  - [Docker Usage](#docker-usage)
+    - [Building the Docker Image](#building-the-docker-image)
+    - [Running with Docker](#running-with-docker)
+    - [Running with Podman](#running-with-podman)
+    - [Docker Compose Example](#docker-compose-example)
+    - [Docker Image Details](#docker-image-details)
+    - [Troubleshooting Docker Build](#troubleshooting-docker-build)
+  - [Recurring Executions Using --wait-time and --max-executions=1](#recurring-executions-using---wait-time-and---max-executions1)
+    - [Smart Mode Detection](#smart-mode-detection)
+    - [Graceful Interruption](#graceful-interruption)
+    - [Detailed Logging](#detailed-logging)
+  - [Parameters Reference](#parameters-reference)
+    - [OTLP Configuration](#otlp-configuration)
+    - [Log Generation (flog)](#log-generation-flog)
+    - [Execution Control](#execution-control)
+    - [Supported Log Formats](#supported-log-formats)
+  - [Development](#development)
+    - [Modern Workflow with uv (Recommended)](#modern-workflow-with-uv-recommended)
+    - [Traditional Workflow (pip/pytest)](#traditional-workflow-pippytest)
+    - [Project Structure](#project-structure)
+  - [Contributing](#contributing)
+  - [License](#license)
+
+
 **Now available as a proper Python package with pip installation!**
+You can install this package via pypi from: https://pypi.org/project/flog-otlp/
 
-flog_otlp is a python wrapper to take STDOUT from [flog](https://github.com/mingrammer/flog) which can generate log file samples for formats like apache and json, then encode these in a OTLP compliant wrapper and forward to an OTLP endpoint. You can also provide custom attributes and execute complex scenarios with asynchronous timing control. I created this for testing sending OTLP log data to Sumo Logic but it could be applicable to any OTLP compliant receiver.
+## About flog-otlp
+flog_otlp is a python wrapper to take STDOUT from [flog](https://github.com/mingrammer/flog) which can generate log file samples for formats like apache and json, then encode these in a OTLP compliant wrapper and forward to an OTLP compliant endpoint. You can also provide custom attributes and execute complex scenarios with asynchronous timing control. 
 
-Mapping for flog payload:
+## Notes about Sumo Logic integration
+While this works with any OTLP reciever I created this for testing posting OTLP log data to Sumo Logic.
+
+For Sumo Logic:
 - The flog event is encoded in a "log" json key.
 - otlp-attributes: add resource-level attributes map to "fields" in sumologic. Fields are posted seperate to the log body and stored in the index with data but each named field must first be must be enabled or it's suppressed.
 - telemetry-attributes: add log-level attributes that appear as json keys in the log event body in sumo logic.
@@ -95,9 +142,10 @@ python3 scripts/run.py -n 50 -f json
 
 ## Scenario Mode
 
-**NEW in v0.2.0**: Execute complex log generation scenarios with precise asynchronous timing control using YAML configuration files.
+**NEW in v0.2**: Execute complex log generation scenarios with precise asynchronous timing control using YAML configuration files.
 
 ### Quick Start
+Refer to the included [example_scenario.yaml](./example_scenario.yaml)
 
 ```bash
 # Execute a scenario from YAML file
@@ -108,59 +156,7 @@ flog-otlp --scenario scenario.yaml --otlp-endpoint https://collector:4318/v1/log
 ```
 
 ### YAML Scenario Format
-
 Create a YAML file defining your test scenario:
-
-```yaml
-name: "Production Load Test"
-description: "Simulates real-world traffic patterns with overlapping log types"
-
-steps:
-  # Normal baseline traffic
-  - start_time: "0s"
-    interval: "30s"
-    iterations: 10
-    parameters:
-      format: "json"
-      number: 100
-      sleep: "10s"
-      telemetry_attributes:
-        - "log_level=info"
-        - "service=web-frontend"
-      otlp_attributes:
-        - "environment=production"
-        - "region=us-east-1"
-
-  # Error spike after 2 minutes
-  - start_time: "2m"
-    interval: "15s" 
-    iterations: 6
-    parameters:
-      format: "json"
-      number: 200
-      sleep: "8s"
-      telemetry_attributes:
-        - "log_level=error"
-        - "service=web-frontend"
-        - "incident=auth-failure"
-      otlp_attributes:
-        - "environment=production"
-        - "region=us-east-1"
-        - "alert_state=triggered"
-
-  # Recovery phase
-  - start_time: "4m"
-    interval: "45s"
-    iterations: 4
-    parameters:
-      format: "json"
-      number: 80
-      sleep: "10s"
-      telemetry_attributes:
-        - "log_level=warn"
-        - "service=web-frontend"
-        - "status=recovering"
-```
 
 ### Scenario Features
 
@@ -178,12 +174,47 @@ steps:
 | `interval` | Time between iterations | `"30s"`, `"5m"` |
 | `iterations` | Number of times to run | `1`, `10`, `0` (infinite) |
 | `parameters` | Any flog-otlp parameters | `format`, `number`, `attributes` |
+| `filters`  | Array of include expressions | See examples below |
 
 ### Time Format Support
 - **Seconds**: `"30s"`, `"90s"`
 - **Minutes**: `"5m"`, `"2.5m"`
 - **Hours**: `"1h"`, `"0.5h"`
 - **Plain numbers**: `30` (defaults to seconds)
+
+### Regex Filtering Support
+**NEW in v0.2.1**: Filter flog output with regular expressions to send only matching log events to OTLP endpoints.
+
+Each step can include optional `filters` parameter with one or more regex patterns:
+
+```yaml
+steps:
+  - start_time: "0s"
+    interval: "30s"
+    iterations: 5
+    parameters:
+      format: "apache_common"
+      number: 1000
+    filters:
+      - "ERROR"                    # Match any line containing "ERROR"
+      - "status.*[45][0-9][0-9]"  # Match 4xx/5xx HTTP status codes
+      - "\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}" # Match IP addresses
+```
+
+**Filter Behavior**:
+- **OR Logic**: Log events matching *any* filter pattern are sent to OTLP
+- **No Filters**: All flog output is sent (default behavior)
+- **Case Sensitive**: Use `(?i)pattern` for case-insensitive matching
+- **Full Regex Support**: All Python regex features supported
+
+**Common Filter Examples**:
+```yaml
+filters:
+  - "(?i)error|warn|fail"           # Errors, warnings, failures
+  - "POST.*api"                     # API POST requests
+  - "user.{1,3}login"                   # User login events
+  - "latency.{1,5}[5-9]\d{2,}ms"        # High latency (500ms+)
+```
 
 ### Real-World Scenario Examples
 
@@ -230,27 +261,6 @@ steps:
     parameters:
       telemetry_attributes:
         - "service=order-service"
-```
-
-### Scenario Execution Flow
-
-1. **Load & Validate**: YAML file is parsed and validated
-2. **Schedule All Steps**: Each step is scheduled in its own thread
-3. **Asynchronous Execution**: Steps wait for their start time, then execute iterations
-4. **Real-time Logging**: Progress, commands, and parameters logged at INFO level
-5. **Graceful Shutdown**: Ctrl+C stops all threads cleanly
-
-Example output:
-```
-INFO - Starting scenario: Production Load Test
-INFO - Estimated total scenario duration: 390.0s
-INFO - All 3 steps scheduled. Waiting for completion...
-INFO - Executing step 1, iteration 1/10 at 14:30:00 UTC (T+0.0s)
-INFO - Step 1.1 flog command: flog -f json -n 100 -s 10s
-INFO - Step 1.1 parameters: {'format': 'json', 'number': 100, ...}
-INFO - Step 2 scheduled to start in 120.0s
-INFO - Step 1.1 completed in 11.2s (100 logs)
-INFO - Executing step 1, iteration 2/10 at 14:30:30 UTC (T+30.0s)
 ```
 
 ## Docker Usage
@@ -328,6 +338,7 @@ podman run --rm flog-otlp:uv \
 ```
 
 ### Docker Compose Example
+You can create a compose file to include a local OTLP agent and receiver
 
 ```yaml
 version: '3.8'
@@ -361,12 +372,6 @@ services:
 
 ### Troubleshooting Docker Build
 
-All Docker builds should work now. If you encounter any issues:
-
-1. **Recommended**: Use the uv-based build (fastest)
-2. **Standard**: Use the main Dockerfile
-3. **Fallback**: Use the alternative Dockerfile
-
 ```bash
 # Build with uv (recommended - fastest and most reliable)
 docker build -f Dockerfile.uv -t flog-otlp:uv .
@@ -374,28 +379,16 @@ docker build -f Dockerfile.uv -t flog-otlp:uv .
 # Standard build
 docker build -t flog-otlp .
 
-# Alternative build (if others fail)
+# Alternative build 
 docker build -f Dockerfile.alt -t flog-otlp:alt .
 ```
 
-## Recurring Executions
-This enables powerful use cases like continuous log generation for testing, scheduled batch processing, and long-running observability scenarios
+## Recurring Executions Using --wait-time and --max-executions=1
+This enables powerful use cases like continuous log generation for testing, scheduled batch processing, and long-running observability scenarios. These two parameters are applied in the wrapper rather than as parameters to flog, so will execute multiple flog commands in series. The wrapper can call your flog command and forward logs on a configurable interval.
 
 ### Smart Mode Detection
 - **Single mode**: When wait-time=0 and max-executions=1 (default)
 - **Recurring mode**: When wait-time>0 OR max-executions≠1
-
-The wrapper can call your flog command and forward logs on a configurable interval.
-
-- --wait-time (seconds): Default: 0 (single execution),  > 0: Time to wait between flog executions
-Examples: --wait-time 30, --wait-time 120.5
-- --max-executions (count): Default: 1 (single execution), 0: Run forever until manually stopped (Ctrl+C), > 1: Run specified number of times
-Examples: --max-executions 10, --max-executions 0
-
-### Graceful Interruption:
-Ctrl+C stops gracefully with summary report
-Current execution completes before stopping
-No data loss during interruption
 
 ```bash
 # Run 10 times with 30 second intervals
@@ -416,22 +409,30 @@ flog-otlp -f json -n 200 \
   --wait-time 45 --max-executions 5
 ```
 
+### Graceful Interruption
+
+Ctrl+C stops gracefully with summary report so the current execution completes before stopping
+
 ### Detailed Logging
+The wrapper provides detailed logging of execution, parameters and schedule activity and supports verbose mode.
 
 ```
-Execution #3 started at 14:30:15 UTC
-Executing: flog -f apache_common -n 100 -s 5s
-[... processing logs ...]
-Execution #3 completed in 7.2s (100 logs)
-Waiting 30s before next execution...
-Comprehensive Summary:
-EXECUTION SUMMARY:
-  Total executions: 5
-  Total logs processed: 1,000  
-  Total runtime: 187.3s
-  Average logs per execution: 200.0
-  Started: 2025-09-01 14:25:00 UTC
-  Ended: 2025-09-01 14:28:07 UTC
+2025-09-03 14:57:59 - otlp_log_sender - INFO - OTLP Log Sender for flog
+2025-09-03 14:57:59 - otlp_log_sender - INFO - Configuration:
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Endpoint: http://localhost:4318/v1/logs
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Service Name: flog-generator
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Send Delay: 0.1s
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Log Format: apache_common
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Log Count: 200
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Duration: 10s
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Wait Time: 0s
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Max Executions: 1
+2025-09-03 14:57:59 - otlp_log_sender - INFO -   Telemetry Attributes: {'app': 'web-server', 'debug': True}
+2025-09-03 14:57:59 - otlp_log_sender - INFO - Using single execution mode
+2025-09-03 14:57:59 - flog_otlp.sender.OTLPLogSender - INFO - Executing: flog -f apache_common -n 200 -s 10s
+2025-09-03 14:57:59 - flog_otlp.sender.OTLPLogSender - INFO - Sending logs to: http://localhost:4318/v1/logs
+^C2025-09-03 14:58:02 - flog_otlp.sender.OTLPLogSender - WARNING - Interrupted by user
+2025-09-03 14:58:02 - otlp_log_sender - ERROR - Log processing completed with errors
 ```
 
 ## Parameters Reference
