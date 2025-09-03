@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025-09-03
+
+### Added
+- **Custom Strings Support**: Load custom string arrays from YAML files for realistic log data generation
+  - New `--strings-file` CLI parameter for specifying YAML file path containing string dictionaries
+  - `%S[key]` formatting variable for random selection from custom string arrays
+  - Comprehensive YAML validation ensuring proper structure (dictionary of string arrays)
+  - Graceful error handling for missing keys with `[MISSING_KEY:keyname]` placeholders
+  - Integration with scenario mode for domain-specific log generation
+- **Example Strings File**: Comprehensive `example_strings.yaml` with 10+ categories including:
+  - User names, service names, error messages, device types
+  - Geographic locations, HTTP methods, log levels, business actions
+  - Department names, transaction types, HTTP status codes
+  - CEF (Common Event Format) sample logs for security scenarios
+  - AWS account IDs for cloud logging scenarios
+
+### Changed
+- **CLI Interface**: Extended argument parsing to support strings file loading
+- **Scenario Processing**: Updated ScenarioStep, ScenarioExecutor, and ScenarioParser to accept custom strings
+- **Documentation**: Added comprehensive custom strings section to README.md with usage examples
+- **Test Coverage**: Added 14 new test cases (8 for CLI strings + 6 for scenario integration)
+
+### Technical Details
+- **New Function**: `load_strings_file()` in `cli.py` with comprehensive YAML validation
+- **Enhanced ScenarioStep**: Added custom_strings parameter and `%S[key]` token processing
+- **Test Files**: 
+  - `tests/test_cli_strings.py` - New test suite for strings file functionality
+  - Extended `tests/test_scenario.py` with custom strings integration tests
+- **Code Quality**: All 75 tests passing, clean linting, robust error handling
+- **Architecture**: Seamless integration through CLI → ScenarioParser → ScenarioExecutor → ScenarioStep pipeline
+
+### Example Usage
+```bash
+# Use custom strings file with scenario mode
+flog-otlp --scenario scenario.yaml --strings-file example_strings.yaml
+
+# Custom strings work with all other options
+flog-otlp --scenario test.yaml --strings-file custom.yaml --otlp-endpoint https://collector:4318/v1/logs
+```
+
+### YAML Strings File Format
+```yaml
+users:
+  - "alice.johnson"
+  - "bob.smith"
+  - "charlie.brown"
+
+services:
+  - "user-service"
+  - "order-service" 
+  - "payment-service"
+
+error_messages:
+  - "Connection timeout after 30 seconds"
+  - "Invalid authentication credentials"
+  - "Resource not found in database"
+```
+
+### Replacement Variable Usage
+```yaml
+# In scenario steps, use %S[key] to randomly select from string arrays
+replacements:
+  - pattern: "user=(\\w+)"
+    replacement: "user=%S[users]"
+  - pattern: "service=(\\w+)" 
+    replacement: "service=%S[services]"
+  - pattern: "error=(.*)"
+    replacement: "error=%S[error_messages]"
+```
+
 ## [0.2.1] - 2025-09-03
 
 ### Added

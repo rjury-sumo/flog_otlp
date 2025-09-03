@@ -221,7 +221,7 @@ wheels = [
 
 [[package]]
 name = "flog-otlp"
-version = "0.2.1"
+version = "0.2.2"
 source = { editable = "." }
 dependencies = [
     { name = "lorem-text" },
