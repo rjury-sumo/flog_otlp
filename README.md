@@ -175,6 +175,7 @@ Create a YAML file defining your test scenario:
 | `iterations` | Number of times to run | `1`, `10`, `0` (infinite) |
 | `parameters` | Any flog-otlp parameters | `format`, `number`, `attributes` |
 | `filters`  | Array of include expressions | See examples below |
+| `replacements` | Array of regex replacements | See examples below |
 
 ### Time Format Support
 - **Seconds**: `"30s"`, `"90s"`
@@ -214,6 +215,100 @@ filters:
   - "POST.*api"                     # API POST requests
   - "user.{1,3}login"                   # User login events
   - "latency.{1,5}[5-9]\d{2,}ms"        # High latency (500ms+)
+```
+
+### Regex Replacement Support
+**NEW in v0.2.1**: Transform flog output with regex-based substitutions using dynamic formatting variables.
+
+Each step can include optional `replacements` parameter with pattern/replacement pairs:
+
+```yaml
+steps:
+  - start_time: "0s"
+    interval: "30s"
+    iterations: 5
+    parameters:
+      format: "json"
+      number: 100
+    replacements:
+      - pattern: "user_\\d+"
+        replacement: "user_%n[1000,9999]"
+      - pattern: "password=\\w+"
+        replacement: "password=***"
+      - pattern: "message=.*"
+        replacement: "message=%s"
+```
+
+**Replacement Order**: Replacements are applied after filtering but before sending to OTLP.
+
+**Formatting Variables**:
+- `%s` - Lorem ipsum sentence using lorem-text
+- `%n[x,y]` - Random integer between x and y (inclusive)
+- `%e` - Current epoch timestamp  
+- `%x[n]` - Lowercase hexadecimal with n characters (e.g., `%x[8]` → "a1b2c3d4")
+- `%X[n]` - Uppercase hexadecimal with n characters (e.g., `%X[4]` → "A1B2")
+- `%r[n]` - Random string of letters/digits with length n
+- `%g` - GUID format (8-4-4-4-12 hex digits, e.g., "a1b2c3d4-e5f6-7890-abcd-ef0123456789")
+
+**Common Replacement Examples**:
+```yaml
+replacements:
+  # Anonymize user IDs with random numbers
+  - pattern: "user_id=(\\d+)"
+    replacement: "user_id=%n[10000,99999]"
+  
+  # Replace IP addresses with random IPs
+  - pattern: "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
+    replacement: "%n[1,255].%n[1,255].%n[1,255].%n[1,255]"
+  
+  # Generate session tokens
+  - pattern: "session_token=\\w+"
+    replacement: "session_token=%r[32]"
+  
+  # Add realistic error messages
+  - pattern: "error_msg=null"
+    replacement: "error_msg=%s"
+  
+  # Replace timestamps
+  - pattern: "timestamp=\\d+"
+    replacement: "timestamp=%e"
+  
+  # Generate transaction IDs  
+  - pattern: "tx_id=\\w+"
+    replacement: "tx_id=%X[8]"
+  
+  # Generate GUIDs for request tracking
+  - pattern: "request_id=\\w+"
+    replacement: "request_id=%g"
+```
+
+**Advanced Examples**:
+```yaml
+# Data masking and synthetic data generation
+replacements:
+  # Credit card numbers -> masked format
+  - pattern: "card_number=\\d{16}"
+    replacement: "card_number=****-****-****-%n[1000,9999]"
+  
+  # Email addresses -> anonymized  
+  - pattern: "email=[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}"
+    replacement: "email=user%n[1,999]@example.com"
+  
+  # Phone numbers -> random format
+  - pattern: "phone=\\+?[\\d-()]+"  
+    replacement: "phone=+1-%n[100,999]-%n[100,999]-%n[1000,9999]"
+  
+  # Generate realistic log messages with context
+  - pattern: "message=\"[^\"]*\""
+    replacement: "message=\"User action completed: %s Transaction ID: %r[8]\""
+  
+  # API correlation IDs with GUID format
+  - pattern: "correlation_id=[\\w-]+"
+    replacement: "correlation_id=%g"
+  
+  # Database record IDs
+  - pattern: "record_id=\\d+"
+    replacement: "record_id=%g"
 ```
 
 ### Real-World Scenario Examples

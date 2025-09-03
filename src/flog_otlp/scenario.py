@@ -1,7 +1,9 @@
 """Scenario parsing and execution for flog-otlp."""
 
 import logging
+import random
 import re
+import string
 import threading
 import time
 from datetime import datetime, timezone
@@ -9,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
+from lorem_text import lorem
 
 
 class ScenarioStep:
@@ -20,6 +23,7 @@ class ScenarioStep:
         self.iterations = step_data.get("iterations", 1)
         self.parameters = step_data.get("parameters", {})
         self.filters = step_data.get("filters", [])
+        self.replacements = step_data.get("replacements", [])
 
         # Compile regex patterns for efficiency
         self.compiled_filters = []
@@ -31,6 +35,19 @@ class ScenarioStep:
                 except re.error as e:
                     raise ValueError(f"Invalid regex filter pattern '{filter_pattern}': {e}") from e
 
+        # Compile replacement patterns
+        self.compiled_replacements = []
+        if self.replacements:
+            import re
+            for replacement in self.replacements:
+                if not isinstance(replacement, dict) or "pattern" not in replacement or "replacement" not in replacement:
+                    raise ValueError(f"Invalid replacement format: {replacement}. Expected dict with 'pattern' and 'replacement' keys.")
+                try:
+                    compiled_pattern = re.compile(replacement["pattern"])
+                    self.compiled_replacements.append((compiled_pattern, replacement["replacement"]))
+                except re.error as e:
+                    raise ValueError(f"Invalid regex replacement pattern '{replacement['pattern']}': {e}") from e
+
     def matches_filters(self, log_line: str) -> bool:
         """Check if a log line matches any of the regex filters."""
         if not self.compiled_filters:
@@ -40,6 +57,85 @@ class ScenarioStep:
             if pattern.search(log_line):
                 return True
         return False
+
+    def apply_replacements(self, log_line: str) -> str:
+        """Apply regex replacements with formatting variables to a log line."""
+        if not self.compiled_replacements:
+            return log_line  # No replacements means return original line
+
+        modified_line = log_line
+        for pattern, replacement_template in self.compiled_replacements:
+            # Apply formatting variables to replacement template
+            formatted_replacement = self._format_replacement_variables(replacement_template)
+            # Apply regex substitution
+            modified_line = pattern.sub(formatted_replacement, modified_line)
+
+        return modified_line
+
+    def _format_replacement_variables(self, template: str) -> str:
+        """Format replacement variables in a template string."""
+        result = template
+
+        # %s - Lorem ipsum sentence
+        if "%s" in result:
+            sentence = lorem.sentence()
+            result = result.replace("%s", sentence)
+
+        # %n[x,y] - Random integer between x and y
+        import re
+        n_pattern = re.compile(r'%n\[(\d+),(\d+)\]')
+        for match in n_pattern.finditer(template):
+            min_val = int(match.group(1))
+            max_val = int(match.group(2))
+            random_int = str(random.randint(min_val, max_val))
+            result = result.replace(match.group(0), random_int)
+
+        # %e - Current epoch time
+        if "%e" in result:
+            epoch_time = str(int(time.time()))
+            result = result.replace("%e", epoch_time)
+
+        # %x[n] - Lowercase hexadecimal with length n
+        hex_pattern = re.compile(r'%x\[(\d+)\]')
+        for match in hex_pattern.finditer(template):
+            length = int(match.group(1))
+            max_value = (16 ** length) - 1
+            format_str = f'0{length}x'
+            hex_value = format(random.randint(0, max_value), format_str)
+            result = result.replace(match.group(0), hex_value, 1)
+
+        # %X[n] - Uppercase hexadecimal with length n
+        hex_upper_pattern = re.compile(r'%X\[(\d+)\]')
+        for match in hex_upper_pattern.finditer(template):
+            length = int(match.group(1))
+            max_value = (16 ** length) - 1
+            format_str = f'0{length}X'
+            hex_value = format(random.randint(0, max_value), format_str)
+            result = result.replace(match.group(0), hex_value, 1)
+
+        # %r[n] - Random string of letters and digits of length n
+        r_pattern = re.compile(r'%r\[(\d+)\]')
+        for match in r_pattern.finditer(template):
+            length = int(match.group(1))
+            chars = string.ascii_letters + string.digits
+            random_string = ''.join(random.choice(chars) for _ in range(length))
+            result = result.replace(match.group(0), random_string, 1)
+
+        # %g - GUID format (8-4-4-4-12 hexadecimal)
+        if "%g" in result:
+            # Generate 32 random hex digits
+            hex_chars = '0123456789abcdef'
+            guid_parts = [
+                ''.join(random.choice(hex_chars) for _ in range(8)),   # 8 digits
+                ''.join(random.choice(hex_chars) for _ in range(4)),   # 4 digits
+                ''.join(random.choice(hex_chars) for _ in range(4)),   # 4 digits
+                ''.join(random.choice(hex_chars) for _ in range(4)),   # 4 digits
+                ''.join(random.choice(hex_chars) for _ in range(12))   # 12 digits
+            ]
+            guid = '-'.join(guid_parts)
+            result = result.replace("%g", guid)
+
+        return result
 
     @staticmethod
     def _parse_duration(duration_str: str) -> float:
@@ -338,11 +434,14 @@ class ScenarioExecutor:
 
                     # Apply regex filters if present
                     if step.matches_filters(line.strip()):
-                        # Detailed log line processing at DEBUG level
-                        self.logger.debug(f"Processing line {sent_count + 1}: {line.strip()[:100]}...")
+                        # Apply replacements if present
+                        processed_line = step.apply_replacements(line.strip())
 
-                        # Parse the log line
-                        log_entry = sender.parse_flog_line(line)
+                        # Detailed log line processing at DEBUG level
+                        self.logger.debug(f"Processing line {sent_count + 1}: {processed_line[:100]}...")
+
+                        # Parse the processed log line
+                        log_entry = sender.parse_flog_line(processed_line)
 
                         # Create OTLP payload
                         otlp_payload = sender.create_otlp_payload(log_entry)

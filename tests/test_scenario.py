@@ -117,6 +117,208 @@ class TestScenarioStep:
         assert step.matches_filters("error occurred") is True
         assert step.matches_filters("ERROR occurred") is True
 
+    def test_replacements_stored_and_compiled(self):
+        """Test that replacements are stored and compiled correctly."""
+        replacements = [
+            {"pattern": r"user_(\d+)", "replacement": "user_%n[1000,9999]"},
+            {"pattern": r"timestamp:\d+", "replacement": "timestamp:%e"}
+        ]
+        step = ScenarioStep({"replacements": replacements})
+        assert step.replacements == replacements
+        assert len(step.compiled_replacements) == 2
+
+    def test_invalid_replacement_format(self):
+        """Test error handling for invalid replacement format."""
+        with pytest.raises(ValueError, match="Invalid replacement format"):
+            ScenarioStep({"replacements": [{"pattern": r"test"}]})  # Missing replacement key
+
+        with pytest.raises(ValueError, match="Invalid replacement format"):
+            ScenarioStep({"replacements": ["invalid"]})  # Not a dict
+
+    def test_invalid_regex_replacement_pattern(self):
+        """Test error handling for invalid regex patterns in replacements."""
+        with pytest.raises(ValueError, match="Invalid regex replacement pattern"):
+            ScenarioStep({"replacements": [{"pattern": r"[unclosed", "replacement": "test"}]})
+
+    def test_apply_replacements_no_replacements(self):
+        """Test that apply_replacements returns original line when no replacements."""
+        step = ScenarioStep({})
+        original = "test log line"
+        assert step.apply_replacements(original) == original
+
+    def test_apply_replacements_with_static_text(self):
+        """Test replacements with static text."""
+        replacements = [
+            {"pattern": r"user_\d+", "replacement": "user_anonymous"},
+            {"pattern": r"password=\w+", "replacement": "password=***"}
+        ]
+        step = ScenarioStep({"replacements": replacements})
+
+        log_line = "Login: user_123 password=secret123 successful"
+        result = step.apply_replacements(log_line)
+        expected = "Login: user_anonymous password=*** successful"
+        assert result == expected
+
+    def test_format_replacement_variables_sentence(self):
+        """Test %s formatting variable for lorem sentence."""
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("Message: %s")
+        assert result.startswith("Message: ")
+        assert len(result) > len("Message: ")
+        # Should contain some lorem text
+        assert any(char.isalpha() for char in result[9:])  # Skip "Message: " prefix
+
+    def test_format_replacement_variables_random_number(self):
+        """Test %n[x,y] formatting variable for random integers."""
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("id_%n[100,200]_end")
+        assert result.startswith("id_")
+        assert result.endswith("_end")
+
+        # Extract the number part
+        number_str = result[3:-4]  # Remove "id_" and "_end"
+        number = int(number_str)
+        assert 100 <= number <= 200
+
+    def test_format_replacement_variables_epoch(self):
+        """Test %e formatting variable for epoch time."""
+        import time
+        before_time = int(time.time())
+
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("timestamp_%e")
+
+        after_time = int(time.time())
+
+        assert result.startswith("timestamp_")
+        epoch_str = result[10:]  # Remove "timestamp_" prefix
+        epoch_time = int(epoch_str)
+        assert before_time <= epoch_time <= after_time
+
+    def test_format_replacement_variables_hex_lowercase(self):
+        """Test %x[n] formatting variable for lowercase hexadecimal."""
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("id_%x[8]")
+        assert result.startswith("id_")
+        hex_part = result[3:]
+        assert len(hex_part) == 8
+        assert all(c in '0123456789abcdef' for c in hex_part)
+
+    def test_format_replacement_variables_hex_uppercase(self):
+        """Test %X[n] formatting variable for uppercase hexadecimal."""
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("ID_%X[4]")
+        assert result.startswith("ID_")
+        hex_part = result[3:]
+        assert len(hex_part) == 4
+        assert all(c in '0123456789ABCDEF' for c in hex_part)
+
+    def test_format_replacement_variables_hex_different_lengths(self):
+        """Test hex formatting variables with different lengths."""
+        step = ScenarioStep({})
+
+        # Test 2-character lowercase hex
+        result2 = step._format_replacement_variables("short_%x[2]")
+        hex_part2 = result2[6:]
+        assert len(hex_part2) == 2
+        assert all(c in '0123456789abcdef' for c in hex_part2)
+
+        # Test 12-character uppercase hex
+        result12 = step._format_replacement_variables("long_%X[12]")
+        hex_part12 = result12[5:]
+        assert len(hex_part12) == 12
+        assert all(c in '0123456789ABCDEF' for c in hex_part12)
+
+    def test_format_replacement_variables_random_string(self):
+        """Test %r[n] formatting variable for random strings."""
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("token_%r[8]")
+        assert result.startswith("token_")
+        random_part = result[6:]
+        assert len(random_part) == 8
+        # Should contain only letters and digits
+        import string
+        valid_chars = string.ascii_letters + string.digits
+        assert all(c in valid_chars for c in random_part)
+
+    def test_format_replacement_variables_guid(self):
+        """Test %g formatting variable for GUID generation."""
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("request_id=%g")
+        assert result.startswith("request_id=")
+
+        guid_part = result[11:]  # Remove "request_id=" prefix
+
+        # GUID should match pattern: 8-4-4-4-12 hex digits
+        guid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        import re
+        assert re.match(guid_pattern, guid_part)
+
+        # Check specific format components
+        parts = guid_part.split('-')
+        assert len(parts) == 5
+        assert len(parts[0]) == 8   # First part: 8 digits
+        assert len(parts[1]) == 4   # Second part: 4 digits
+        assert len(parts[2]) == 4   # Third part: 4 digits
+        assert len(parts[3]) == 4   # Fourth part: 4 digits
+        assert len(parts[4]) == 12  # Fifth part: 12 digits
+
+        # All parts should be lowercase hex
+        for part in parts:
+            assert all(c in '0123456789abcdef' for c in part)
+
+    def test_format_replacement_variables_guid_multiple(self):
+        """Test multiple GUID generation produces unique values."""
+        step = ScenarioStep({})
+
+        # Generate multiple GUIDs
+        guids = []
+        for _ in range(5):
+            result = step._format_replacement_variables("id_%g")
+            guid_part = result[3:]  # Remove "id_" prefix
+            guids.append(guid_part)
+
+        # All GUIDs should be unique (very high probability)
+        assert len(set(guids)) == len(guids)
+
+        # All should match GUID format
+        guid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        import re
+        for guid in guids:
+            assert re.match(guid_pattern, guid)
+
+    def test_format_replacement_variables_multiple(self):
+        """Test multiple formatting variables in one template."""
+        step = ScenarioStep({})
+        result = step._format_replacement_variables("user_%n[1,100]_session_%r[4]_time_%e")
+
+        parts = result.split('_')
+        assert parts[0] == "user"
+        assert 1 <= int(parts[1]) <= 100
+        assert parts[2] == "session"
+        assert len(parts[3]) == 4
+        assert parts[4] == "time"
+        assert parts[5].isdigit()
+
+    def test_apply_replacements_with_formatting_variables(self):
+        """Test complete replacement flow with formatting variables."""
+        replacements = [
+            {"pattern": r"user_id=\d+", "replacement": "user_id=%n[1000,9999]"},
+            {"pattern": r"session_token=\w+", "replacement": "session_token=%r[16]"},
+            {"pattern": r"message=.*", "replacement": "message=%s"}
+        ]
+        step = ScenarioStep({"replacements": replacements})
+
+        log_line = "Login user_id=123 session_token=abc123def message=original message here"
+        result = step.apply_replacements(log_line)
+
+        assert "user_id=" in result
+        assert "session_token=" in result
+        assert "message=" in result
+        assert "123" not in result  # Original user_id should be replaced
+        assert "abc123def" not in result  # Original session_token should be replaced
+        assert "original message here" not in result  # Original message should be replaced
+
 
 class TestScenarioParser:
     """Tests for ScenarioParser class."""

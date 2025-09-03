@@ -26,6 +26,7 @@ keywords = ["otlp", "opentelemetry", "logging", "flog", "observability", "testin
 dependencies = [
     "requests>=2.25.0",
     "PyYAML>=6.0.0",
+    "lorem-text>=2.1.0",
 ]
 
 
