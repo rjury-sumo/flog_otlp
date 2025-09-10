@@ -13,32 +13,6 @@
             "console": "integratedTerminal",
             "justMyCode": true
      //       "args": "${command:pickArgs}"
-        },
-          {
-                "name": "Python: Attach",
-                "type": "python",
-                "request": "attach",
-                "port": 5678, // Or your chosen port
-                "host": "localhost",
-                "justMyCode": false, // Set to false if you need to step into library code
-                            "args": [
-                "--config",
-                "example_scenario_strings.yaml",
-                "--strings-file",
-                "example_strings.yaml",
-            ]
-            },
-        {
-            "name": "Python Debugger: Current File with Arguments (flog-otlp)",
-            "type": "python",
-            "request": "launch",
-            "program": "flog-otlp",
-            "console": "integratedTerminal",
-            "args": [
-                "--config",
-                "example_scenario_strings.yaml",
-                "--strings-file",
-                "example_strings.yaml",
-            ]
+        }
     ]
 }
