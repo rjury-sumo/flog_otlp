@@ -21,26 +21,26 @@ steps:
       sleep: "5s"
     replacements:
       # # Anonymize user IDs with random numbers
-      - pattern: "user[_-]?id[=:]\\d+"
-        replacement: "user_id=%n[10000,99999]"
-      # Replace IP addresses with random ones 123 to show it's been changed
-      - pattern: "123\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
-        replacement: "%n[10,192].%n[1,255].%n[1,255].%n[1,255]"
-      - pattern: "message[=:]\"[^\"]*recovery[^\"]*\""
-        replacement: "message=\"System recovery in progress: %s\""
-      # Generate correlation IDs for distributed tracing
-      - pattern: "correlation[_-]?id[=:]\\w+"
-        replacement: "correlation_id=%g"
+      # - pattern: 'user[_-]?id[=:]\d+'
+      #   replacement: "user_id=%n[10000,99999]"
+      # # Replace IP addresses with random ones 123 to show it's been changed  
+      # - pattern: '123\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+      #   replacement: "%n[10,192].%n[1,255].%n[1,255].%n[1,255]"
+      # - pattern: 'message[=:]"[^"]*recovery[^"]*"'
+      #   replacement: 'message="System recovery in progress: %s"'
+      # # Generate correlation IDs for distributed tracing
+      # - pattern: 'correlation[_-]?id[=:]\w+'
+      #   replacement: "correlation_id=%g"
       # Replace guid with a random new GUIDs
-      - pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+      - pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
         replacement: "%g"
       # Modify request paths to use strings from example_scenario_strings.yaml
       # custom request paths for services and actions
-      - pattern: "\"request\" *: *\"[^\\\"]+"
-        replacement: "\"request\": \"/myapi/%S[services]/%S[actions]"
+      - pattern: '"request" *: *"[^"\\]+'
+        replacement: '"request": "/myapi/%S[services]/%S[actions]'
       # replace http status with a 5XX code from a specificed list
-      - pattern: "\"status\" *: *[0-9]+"
-        replacement: "\"status\": %S[http_5xx]"
-      # full replacment example replacing whole message with CEF format examples
-      - pattern: ".*"
-        replacement: "%S[cef_checkpoint]"
+      - pattern: '"status" *: *[0-9]+'
+        replacement: '"status": %S[http_statuses_5xx]'
+      # full replacement example replacing whole message with CEF format examples
+      # - pattern: '.*'
+      #   replacement: "%S[cef_checkpoint]"

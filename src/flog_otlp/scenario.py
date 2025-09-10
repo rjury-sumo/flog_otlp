@@ -80,8 +80,8 @@ class ScenarioStep:
         for pattern, replacement_template in self.compiled_replacements:
             # Apply formatting variables to replacement template
             formatted_replacement = self._format_replacement_variables(replacement_template)
-            # Apply regex substitution
-            modified_line = pattern.sub(formatted_replacement, modified_line)
+            # Apply regex substitution using lambda to treat replacement as literal string
+            modified_line = pattern.sub(lambda m: formatted_replacement, modified_line)
 
         return modified_line
 
@@ -480,12 +480,15 @@ class ScenarioExecutor:
 
                     # Apply regex filters if present
                     if step.matches_filters(line.strip()):
+                        # Log original line before any replacements (verbose mode)
+                        self.logger.debug(f"Original log line before replacements: {line.strip()}")
+                        
                         # Apply replacements if present
                         processed_line = step.apply_replacements(line.strip())
 
                         # Detailed log line processing at DEBUG level
                         self.logger.debug(
-                            f"Processing line {sent_count + 1}: {processed_line[:100]}..."
+                            f"Processing line {sent_count + 1}: {processed_line}"
                         )
 
                         # Parse the processed log line
