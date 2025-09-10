@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flog-otlp"
-version = "0.2.2"
+version = "0.2.3"
 description = "A Python utility that generates realistic log data using flog and sends it to OpenTelemetry Protocol (OTLP) endpoints"
 readme = "README.md"
 requires-python = ">=3.13"
