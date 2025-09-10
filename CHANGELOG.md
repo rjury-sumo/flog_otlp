@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2025-09-11
+
+### Fixed
+- **YAML Escaping Issues**: Reformatted regex patterns to use single quotes, eliminating the need for double-escaping backslashes
+- **Regex Replacement Bug**: Fixed "bad escape \s" errors by using lambda functions to treat replacement strings as literals instead of regex patterns
+- **String Interpolation Safety**: Prevented backslashes in dynamic content (like lorem text) from being interpreted as regex escape sequences
+
+### Enhanced
+- **Verbose Logging**: Added debug logging to show original log lines before any replacements are applied
+- **Debug Output**: Updated processing logs to show complete processed lines instead of truncating at 100 characters
+- **Error Prevention**: Improved robustness when replacement templates contain special regex characters
+
+### Technical Details
+- **Pattern Format**: YAML patterns now use single quotes (e.g., `'user[_-]?id[=:]\d+'` instead of `"user[_-]?id[=:]\\d+"`)
+- **Replacement Safety**: Using `pattern.sub(lambda m: formatted_replacement, modified_line)` for literal string replacement
+- **Enhanced Debugging**: Added `logger.debug(f"Original log line before replacements: {line.strip()}")` for troubleshooting
+- **Test Coverage**: All 75 tests passing with improved error handling
+
+### Example of Fixed Issues
+```yaml
+# Before (0.2.2) - Required double escaping
+- pattern: "user[_-]?id[=:]\\d+"
+  replacement: "user_id=%n[10000,99999]"
+
+# After (0.2.3) - Clean single quotes
+- pattern: 'user[_-]?id[=:]\d+'
+  replacement: "user_id=%n[10000,99999]"
+```
+
 ## [0.2.2] - 2025-09-03
 
 ### Added
