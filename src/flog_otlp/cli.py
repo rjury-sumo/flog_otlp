@@ -10,7 +10,7 @@ import yaml
 from .logging_config import setup_logging
 from .parser import parse_key_value_pairs
 from .scenario import ScenarioExecutor, ScenarioParser
-from .sender import OTLPLogSender
+from .sender import OTLPLogSender, SumoLogicSender
 
 
 def load_strings_file(strings_file_path: str) -> Dict[str, List[str]]:
@@ -70,7 +70,11 @@ Examples:
   # Scenario executions:
   %(prog)s --scenario scenario.yaml              # Execute scenario from YAML file
 
-  # Custom attributes and headers:
+  # Sumo Logic HTTP Source:
+  %(prog)s --output-type sumologic --sumo-endpoint "https://endpoint.sumologic.com/..." -n 100 -f json
+  %(prog)s --output-type sumologic --sumo-endpoint "https://..." --sumo-category "app/logs" --sumo-fields "env=prod"
+
+  # Custom attributes and headers (OTLP):
   %(prog)s --otlp-attributes environment=production --otlp-attributes region=us-east-1
   %(prog)s --telemetry-attributes app=web-server --telemetry-attributes debug=true
   %(prog)s --otlp-header "Authorization=Bearer token123" --otlp-header "X-Custom=value"
@@ -78,6 +82,14 @@ Examples:
 Supported log formats:
   apache_common, apache_combined, apache_error, rfc3164, rfc5424, common_log, json
         """,
+    )
+
+    # Output type selection
+    parser.add_argument(
+        "--output-type",
+        choices=["otlp", "sumologic"],
+        default="otlp",
+        help="Output destination type: otlp or sumologic (default: otlp)",
     )
 
     # OTLP-specific options (matching telemetrygen)
@@ -113,6 +125,33 @@ Supported log formats:
 
     parser.add_argument(
         "--delay", type=float, default=0.1, help="Delay between log sends in seconds (default: 0.1)"
+    )
+
+    # Sumo Logic specific options
+    parser.add_argument(
+        "--sumo-endpoint",
+        help="Sumo Logic HTTP source endpoint URL (required when --output-type=sumologic)",
+    )
+
+    parser.add_argument(
+        "--sumo-category",
+        help="Custom source category for Sumo Logic (X-Sumo-Category header)",
+    )
+
+    parser.add_argument(
+        "--sumo-name",
+        help="Custom source name for Sumo Logic (X-Sumo-Name header)",
+    )
+
+    parser.add_argument(
+        "--sumo-host",
+        help="Custom source host for Sumo Logic (X-Sumo-Host header)",
+    )
+
+    parser.add_argument(
+        "--sumo-fields",
+        action="append",
+        help="Custom fields for Sumo Logic. Format: key=value. Can be repeated. (X-Sumo-Fields header)",
     )
 
     # Recurring execution options
@@ -182,7 +221,7 @@ Supported log formats:
 
     parser.add_argument(
         "--strings-file",
-        help="Path to YAML file containing custom string arrays for %S[key] replacement tokens.",
+        help="Path to YAML file containing custom string arrays for %%S[key] replacement tokens.",
     )
 
     return parser.parse_args()
@@ -231,21 +270,40 @@ def main():
 
     logger.info("OTLP Log Sender for flog")
 
-    # Parse custom attributes and headers
-    otlp_attributes = parse_key_value_pairs(args.otlp_attributes)
-    telemetry_attributes = parse_key_value_pairs(args.telemetry_attributes)
-    otlp_headers = parse_key_value_pairs(args.otlp_header)
+    # Validate output-type specific requirements
+    if args.output_type == "sumologic":
+        if not args.sumo_endpoint:
+            logger.error("--sumo-endpoint is required when --output-type=sumologic")
+            sys.exit(1)
 
-    # Create sender instance with custom parameters
-    sender = OTLPLogSender(
-        endpoint=args.otlp_endpoint,
-        service_name=args.service_name,
-        delay=args.delay,
-        otlp_headers=otlp_headers,
-        otlp_attributes=otlp_attributes,
-        telemetry_attributes=telemetry_attributes,
-        log_format=args.format,
-    )
+    # Create sender instance based on output type
+    if args.output_type == "sumologic":
+        # Parse Sumo Logic fields
+        sumo_fields = parse_key_value_pairs(args.sumo_fields)
+
+        sender = SumoLogicSender(
+            endpoint=args.sumo_endpoint,
+            delay=args.delay,
+            category=args.sumo_category,
+            name=args.sumo_name,
+            host=args.sumo_host,
+            fields=sumo_fields,
+        )
+    else:  # otlp
+        # Parse custom attributes and headers
+        otlp_attributes = parse_key_value_pairs(args.otlp_attributes)
+        telemetry_attributes = parse_key_value_pairs(args.telemetry_attributes)
+        otlp_headers = parse_key_value_pairs(args.otlp_header)
+
+        sender = OTLPLogSender(
+            endpoint=args.otlp_endpoint,
+            service_name=args.service_name,
+            delay=args.delay,
+            otlp_headers=otlp_headers,
+            otlp_attributes=otlp_attributes,
+            telemetry_attributes=telemetry_attributes,
+            log_format=args.format,
+        )
 
     # Determine execution mode
     if args.scenario:
@@ -276,21 +334,34 @@ def main():
     else:
         # Log configuration details for non-scenario modes
         logger.info("Configuration:")
-        logger.info(f"  Endpoint: {args.otlp_endpoint}")
-        logger.info(f"  Service Name: {args.service_name}")
+        logger.info(f"  Output Type: {args.output_type}")
+
+        if args.output_type == "sumologic":
+            logger.info(f"  Endpoint: {sender._obfuscate_endpoint(args.sumo_endpoint)}")
+            if args.sumo_category:
+                logger.info(f"  Category: {args.sumo_category}")
+            if args.sumo_name:
+                logger.info(f"  Name: {args.sumo_name}")
+            if args.sumo_host:
+                logger.info(f"  Host: {args.sumo_host}")
+            if sender.fields:
+                logger.info(f"  Fields: {sender.fields}")
+        else:  # otlp
+            logger.info(f"  Endpoint: {args.otlp_endpoint}")
+            logger.info(f"  Service Name: {args.service_name}")
+            if otlp_attributes:
+                logger.info(f"  OTLP Attributes: {otlp_attributes}")
+            if telemetry_attributes:
+                logger.info(f"  Telemetry Attributes: {telemetry_attributes}")
+            if otlp_headers:
+                logger.debug(f"  Custom Headers: {otlp_headers}")  # Headers may contain sensitive data
+
         logger.info(f"  Send Delay: {args.delay}s")
         logger.info(f"  Log Format: {args.format}")
         logger.info(f"  Log Count: {args.number}")
         logger.info(f"  Duration: {args.sleep}")
         logger.info(f"  Wait Time: {args.wait_time}s")
         logger.info(f"  Max Executions: {'∞' if args.max_executions == 0 else args.max_executions}")
-
-        if otlp_attributes:
-            logger.info(f"  OTLP Attributes: {otlp_attributes}")
-        if telemetry_attributes:
-            logger.info(f"  Telemetry Attributes: {telemetry_attributes}")
-        if otlp_headers:
-            logger.debug(f"  Custom Headers: {otlp_headers}")  # Headers may contain sensitive data
 
         # Build flog command
         flog_cmd = build_flog_command(args)
