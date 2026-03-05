@@ -150,7 +150,7 @@ class ScenarioStep:
             result = result.replace("%g", guid)
 
         # %S[key] - Custom string from strings file
-        s_pattern = re.compile(r'%S\[([^\]]+)\]')
+        s_pattern = re.compile(r"%S\[([^\]]+)\]")
         for match in s_pattern.finditer(template):
             key = match.group(1)
             if key in self.custom_strings:
@@ -482,14 +482,12 @@ class ScenarioExecutor:
                     if step.matches_filters(line.strip()):
                         # Log original line before any replacements (verbose mode)
                         self.logger.debug(f"Original log line before replacements: {line.strip()}")
-                        
+
                         # Apply replacements if present
                         processed_line = step.apply_replacements(line.strip())
 
                         # Detailed log line processing at DEBUG level
-                        self.logger.debug(
-                            f"Processing line {sent_count + 1}: {processed_line}"
-                        )
+                        self.logger.debug(f"Processing line {sent_count + 1}: {processed_line}")
 
                         # Parse the processed log line
                         log_entry = sender.parse_flog_line(processed_line)

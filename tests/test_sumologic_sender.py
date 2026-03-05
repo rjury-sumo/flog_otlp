@@ -119,7 +119,9 @@ class TestSumoLogicSender:
         sender = SumoLogicSender(endpoint="https://endpoint.sumologic.com/receiver/v1/http/test")
 
         # Test with typical Sumo Logic endpoint
-        endpoint = "https://collectors.au.sumologic.com/receiver/v1/http/ZaVnC4iD0FoV8dGHjklmM-LhA=="
+        endpoint = (
+            "https://collectors.au.sumologic.com/receiver/v1/http/ZaVnC4iD0FoV8dGHjklmM-LhA=="
+        )
         obfuscated = sender._obfuscate_endpoint(endpoint)
         assert obfuscated == "https://collectors.au.sumologic.com/receiver/v1/http/ZaVnC***LhA=="
 

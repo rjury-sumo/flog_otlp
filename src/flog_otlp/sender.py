@@ -328,11 +328,11 @@ class SumoLogicSender:
         """Obfuscate the middle portion of the Sumo Logic endpoint URL for logging."""
         try:
             # Only obfuscate URLs that have /http/ or /https/ path (typical Sumo Logic pattern)
-            if '/http/' not in endpoint and '/https/' not in endpoint:
+            if "/http/" not in endpoint and "/https/" not in endpoint:
                 return endpoint
 
             # Find the last path segment (the token part after /http/)
-            parts = endpoint.rsplit('/', 1)
+            parts = endpoint.rsplit("/", 1)
             if len(parts) == 2:
                 base_url, token = parts
                 # Show first 5 and last 5 characters with *** in the middle

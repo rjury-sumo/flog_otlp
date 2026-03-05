@@ -1,6 +1,6 @@
 # flog-otlp
 
-A Python package that generates realistic log data using [flog](https://github.com/mingrammer/flog) and sends it to OpenTelemetry Protocol (OTLP) endpoints. Perfect for testing log pipelines, observability systems, and OTLP collectors.
+A Python package that generates realistic log data using [flog](https://github.com/mingrammer/flog) and sends it to OpenTelemetry Protocol (OTLP) endpoints or Sumo Logic HTTP sources. Perfect for testing log pipelines, observability systems, and OTLP collectors.
 
 - [flog-otlp](#flog-otlp)
   - [About flog-otlp](#about-flog-otlp)
@@ -50,14 +50,19 @@ A Python package that generates realistic log data using [flog](https://github.c
 You can install this package via pypi from: https://pypi.org/project/flog-otlp/
 
 ## About flog-otlp
-flog_otlp is a python wrapper to take STDOUT from [flog](https://github.com/mingrammer/flog) which can generate log file samples for formats like apache and json, then encode these in a OTLP compliant wrapper and forward to an OTLP compliant endpoint. You can also provide custom attributes and execute complex scenarios with asynchronous timing control. 
+flog_otlp is a python wrapper to take STDOUT from [flog](https://github.com/mingrammer/flog) which can generate log file samples for formats like apache and json, then either:
+- Encode logs in an OTLP-compliant wrapper and forward to OTLP endpoints
+- Send raw log lines directly to Sumo Logic HTTP sources via HTTPS POST
+
+You can also provide custom attributes and execute complex scenarios with asynchronous timing control.
 
 ## Notes about Sumo Logic integration
-While this works with any OTLP reciever I created this for testing posting OTLP log data to Sumo Logic.
+This tool supports two output modes for Sumo Logic:
 
-For Sumo Logic:
+### OTLP Mode (default)
+Works with any OTLP receiver including Sumo Logic OTLP endpoints:
 - The flog event is encoded in a "log" json key.
-- otlp-attributes: add resource-level attributes map to "fields" in sumologic. Fields are posted seperate to the log body and stored in the index with data but each named field must first be must be enabled or it's suppressed.
+- otlp-attributes: add resource-level attributes map to "fields" in sumologic. Fields are posted separate to the log body and stored in the index with data but each named field must first be enabled or it's suppressed.
 - telemetry-attributes: add log-level attributes that appear as json keys in the log event body in sumo logic.
 
 Example standard body as it appears in sumo side:
@@ -65,6 +70,13 @@ Example standard body as it appears in sumo side:
 ```json
 {"log_source":"flog","log_type":"apache_common","log":"41.253.249.79 - rath4856 [27/Aug/2025:16:31:15 +1200] \"HEAD /empower HTTP/2.0\" 501 8873"}
 ```
+
+### Sumo Logic HTTP Source Mode (NEW)
+Direct integration with Sumo Logic HTTP sources via `--output-type sumologic`:
+- Sends each flog line as-is via HTTPS POST to HTTP source endpoint
+- Supports Sumo Logic metadata headers: `X-Sumo-Category`, `X-Sumo-Name`, `X-Sumo-Host`, `X-Sumo-Fields`
+- Endpoint URL is obfuscated in logs for security
+- See [Sumo Logic HTTP Source documentation](https://www.sumologic.com/help/docs/send-data/hosted-collectors/http-source/logs-metrics/upload-logs/)
 
 ## Installation
 
@@ -108,7 +120,7 @@ After installation, use the `flog-otlp` command. Supported log formats: `apache_
 ### Single Execution Examples
 
 ```bash
-# Default: 200 logs over 10 seconds
+# Default: 200 logs to OTLP endpoint
 flog-otlp
 
 # 100 logs over 5 seconds
@@ -123,14 +135,29 @@ flog-otlp -f json -n 100 --no-loop
 # Custom OTLP endpoint
 flog-otlp --otlp-endpoint https://collector:4318/v1/logs
 
-# With custom resource attributes
+# With custom resource attributes (OTLP)
 flog-otlp --otlp-attributes environment=production --otlp-attributes region=us-east-1
 
-# With custom log attributes
+# With custom log attributes (OTLP)
 flog-otlp --telemetry-attributes app=web-server --telemetry-attributes debug=true
 
-# With authentication headers
+# With authentication headers (OTLP)
 flog-otlp --otlp-header "Authorization=Bearer token123" --otlp-header "X-Custom=value"
+
+# Sumo Logic HTTP Source (direct HTTPS POST)
+flog-otlp --output-type sumologic \
+  --sumo-endpoint "https://endpoint.sumologic.com/receiver/v1/http/YOUR_TOKEN" \
+  -n 100 -f json
+
+# Sumo Logic with metadata headers
+flog-otlp --output-type sumologic \
+  --sumo-endpoint "https://endpoint.sumologic.com/receiver/v1/http/YOUR_TOKEN" \
+  --sumo-category "app/logs" \
+  --sumo-name "my-app" \
+  --sumo-host "web-server-01" \
+  --sumo-fields "environment=production" \
+  --sumo-fields "region=us-east-1" \
+  -n 100 -f json
 ```
 
 ## Recurring Executions Using --wait-time and --max-executions=1
@@ -165,7 +192,12 @@ Ctrl+C stops gracefully with summary report so the current execution completes b
 
 ## Parameters Reference
 
-### OTLP Configuration
+### Output Configuration
+| Parameter | Description | Default | Example |
+|-----------|-------------|---------|---------|
+| `--output-type` | Output destination type | `otlp` | `otlp`, `sumologic` |
+
+### OTLP Configuration (when --output-type=otlp)
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
 | `--otlp-endpoint` | OTLP logs endpoint URL | `http://localhost:4318/v1/logs` | `https://collector:4318/v1/logs` |
@@ -174,12 +206,21 @@ Ctrl+C stops gracefully with summary report so the current execution completes b
 | `--telemetry-attributes` | Log-level attributes (repeatable) | None | `--telemetry-attributes app=nginx` |
 | `--otlp-header` | Custom HTTP headers (repeatable) | None | `--otlp-header "Auth=Bearer xyz"` |
 
+### Sumo Logic Configuration (when --output-type=sumologic)
+| Parameter | Description | Default | Example |
+|-----------|-------------|---------|---------|
+| `--sumo-endpoint` | Sumo Logic HTTP source URL (required) | None | `https://endpoint.sumologic.com/receiver/v1/http/TOKEN` |
+| `--sumo-category` | Source category | None | `app/logs` |
+| `--sumo-name` | Source name | None | `my-app` |
+| `--sumo-host` | Source host | None | `web-server-01` |
+| `--sumo-fields` | Custom fields (repeatable) | None | `--sumo-fields env=prod` |
+
 ### Log Generation (flog)
 | Parameter | Description | Default | Example |
 |-----------|-------------|---------|---------|
 | `-f, --format` | Log format | `apache_common` | `json`, `rfc5424`, `apache_combined` |
 | `-n, --number` | Number of logs to generate | `200` | `1000` |
-| `-s, --sleep` | Duration to generate logs over | `10s` | `5s`, `2m`, `1h` |
+| `-s, --sleep` | Duration to generate logs over | None (flog default) | `5s`, `2m`, `1h` |
 | `-r, --rate` | Rate limit (logs/second) | None | `50` |
 | `-p, --bytes` | Bytes limit per second | None | `1024` |
 | `-d, --delay-flog` | Delay between log generation | None | `100ms` |

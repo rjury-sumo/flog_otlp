@@ -298,7 +298,7 @@ class TestScenarioStep:
         custom_strings = {
             "names": ["Alice", "Bob", "Charlie"],
             "cities": ["New York", "London", "Tokyo"],
-            "colors": ["red", "blue", "green"]
+            "colors": ["red", "blue", "green"],
         }
         step = ScenarioStep({}, custom_strings)
 
@@ -308,8 +308,12 @@ class TestScenarioStep:
         # Should contain one of the names and one of the cities
         contains_name = any(name in result for name in custom_strings["names"])
         contains_city = any(city in result for city in custom_strings["cities"])
-        assert contains_name, f"Result '{result}' should contain a name from {custom_strings['names']}"
-        assert contains_city, f"Result '{result}' should contain a city from {custom_strings['cities']}"
+        assert contains_name, (
+            f"Result '{result}' should contain a name from {custom_strings['names']}"
+        )
+        assert contains_city, (
+            f"Result '{result}' should contain a city from {custom_strings['cities']}"
+        )
 
     def test_format_replacement_variables_custom_strings_missing_key(self):
         """Test %S[key] with missing key shows placeholder."""
@@ -343,13 +347,15 @@ class TestScenarioStep:
                 if item in result:
                     break
             else:
-                raise AssertionError(f"Result '{result}' should contain at least one item from {custom_strings['items']}")
+                raise AssertionError(
+                    f"Result '{result}' should contain at least one item from {custom_strings['items']}"
+                )
 
     def test_scenario_step_with_custom_strings(self):
         """Test ScenarioStep initialization with custom strings."""
         custom_strings = {
             "users": ["admin", "guest", "user123"],
-            "actions": ["login", "logout", "view"]
+            "actions": ["login", "logout", "view"],
         }
         step = ScenarioStep({"start_time": "0s"}, custom_strings)
         assert step.custom_strings == custom_strings
@@ -358,12 +364,12 @@ class TestScenarioStep:
         """Test complete replacement flow with custom strings."""
         custom_strings = {
             "users": ["alice", "bob", "charlie"],
-            "departments": ["engineering", "marketing", "sales"]
+            "departments": ["engineering", "marketing", "sales"],
         }
         replacements = [
             {"pattern": r"user=\w+", "replacement": "user=%S[users]"},
             {"pattern": r"dept=\w+", "replacement": "dept=%S[departments]"},
-            {"pattern": r"id=\d+", "replacement": "id=%n[1000,9999]"}
+            {"pattern": r"id=\d+", "replacement": "id=%n[1000,9999]"},
         ]
         step = ScenarioStep({"replacements": replacements}, custom_strings)
 
@@ -374,11 +380,15 @@ class TestScenarioStep:
         contains_user = any(user in result for user in custom_strings["users"])
         contains_dept = any(dept in result for dept in custom_strings["departments"])
 
-        assert contains_user, f"Result '{result}' should contain a user from {custom_strings['users']}"
-        assert contains_dept, f"Result '{result}' should contain a department from {custom_strings['departments']}"
+        assert contains_user, (
+            f"Result '{result}' should contain a user from {custom_strings['users']}"
+        )
+        assert contains_dept, (
+            f"Result '{result}' should contain a department from {custom_strings['departments']}"
+        )
         assert "testuser" not in result  # Original should be replaced
         assert "testdept" not in result  # Original should be replaced
-        assert "123" not in result      # Original ID should be replaced
+        assert "123" not in result  # Original ID should be replaced
 
     def test_format_replacement_variables_multiple(self):
         """Test multiple formatting variables in one template."""

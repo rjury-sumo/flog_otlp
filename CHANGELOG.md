@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-01-15
+
+### Added
+- **Sumo Logic HTTP Source Support**: New output mode for direct HTTPS POST to Sumo Logic HTTP sources
+  - New `--output-type` parameter with choices: `otlp` (default) or `sumologic`
+  - New `--sumo-endpoint` parameter for Sumo Logic HTTP source URL (required when using sumologic mode)
+  - Support for Sumo Logic metadata headers:
+    - `--sumo-category` for X-Sumo-Category header
+    - `--sumo-name` for X-Sumo-Name header
+    - `--sumo-host` for X-Sumo-Host header
+    - `--sumo-fields` for X-Sumo-Fields header (repeatable key=value pairs)
+  - New `SumoLogicSender` class in `sender.py` for direct HTTP source integration
+  - Endpoint URL obfuscation in logs for security (shows first 5 and last 5 chars with *** in middle)
+  - Sends each flog line as-is via HTTPS POST (no OTLP wrapping)
+  - Full support for all existing features: recurring executions, scenario mode, all log formats
+
+### Changed
+- **Sleep Parameter Default**: Removed default value for `-s/--sleep` parameter
+  - Now defaults to `None` instead of `"10s"`
+  - Wrapper no longer forces `-s` parameter to flog when not specified
+  - Allows flog to use its own default behavior
+- **Package Description**: Updated to mention both OTLP endpoints and Sumo Logic HTTP sources
+- **README Documentation**: Comprehensive updates for Sumo Logic HTTP Source mode
+  - Added new "Sumo Logic HTTP Source Mode" section
+  - Updated usage examples with Sumo Logic configurations
+  - Added new Parameters Reference sections for output types
+  - Updated all examples to reflect removed sleep default
+- **Keywords**: Added "sumologic" and "http-source" to package keywords
+- **Exports**: Added `SumoLogicSender` to package `__all__` exports
+
+### Technical Details
+- **New Class**: `SumoLogicSender` with methods:
+  - `send_log()` - Send single log line via HTTPS POST
+  - `process_flog_output()` - Execute flog and process output
+  - `run_recurring_executions()` - Support recurring execution mode
+  - `_obfuscate_endpoint()` - Obfuscate endpoint URLs for logging
+- **CLI Updates**:
+  - Validation ensures `--sumo-endpoint` is provided when using `--output-type=sumologic`
+  - Configuration logging shows appropriate settings based on output type
+  - Help text includes Sumo Logic usage examples
+- **Test Coverage**: Added 6 new test cases in `tests/test_sumologic_sender.py`
+  - Initialization with defaults and custom values
+  - Successful log sending
+  - Metadata headers (category, name, host, fields)
+  - Error handling
+  - Endpoint obfuscation
+- **Code Quality**: All 81 tests passing, clean linting, comprehensive error handling
+
+### Example Usage
+```bash
+# Basic Sumo Logic HTTP Source usage
+flog-otlp --output-type sumologic \
+  --sumo-endpoint "https://endpoint.sumologic.com/receiver/v1/http/YOUR_TOKEN" \
+  -n 100 -f json
+
+# With metadata headers
+flog-otlp --output-type sumologic \
+  --sumo-endpoint "https://endpoint.sumologic.com/receiver/v1/http/YOUR_TOKEN" \
+  --sumo-category "app/logs" \
+  --sumo-name "my-app" \
+  --sumo-host "web-server-01" \
+  --sumo-fields "environment=production" \
+  --sumo-fields "region=us-east-1" \
+  -n 100 -f json
+
+# Recurring executions with Sumo Logic
+flog-otlp --output-type sumologic \
+  --sumo-endpoint "https://endpoint.sumologic.com/receiver/v1/http/YOUR_TOKEN" \
+  --wait-time 30 --max-executions 10 \
+  -n 50 -s 5s
+```
+
+### Security
+- Endpoint URLs are automatically obfuscated in all log output
+- Example: `https://collectors.au.sumologic.com/receiver/v1/http/ZaVnC***LhA==`
+
 ## [0.2.3] - 2025-09-11
 
 ### Fixed

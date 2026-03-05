@@ -21,7 +21,7 @@ def load_strings_file(strings_file_path: str) -> Dict[str, List[str]]:
         raise FileNotFoundError(f"Strings file not found: {strings_file_path}")
 
     try:
-        with open(strings_file, 'r', encoding='utf-8') as f:
+        with open(strings_file, "r", encoding="utf-8") as f:
             strings_data = yaml.safe_load(f)
     except yaml.YAMLError as e:
         raise ValueError(f"Invalid YAML in strings file: {e}") from e
@@ -38,7 +38,9 @@ def load_strings_file(strings_file_path: str) -> Dict[str, List[str]]:
         string_list = []
         for i, item in enumerate(value):
             if not isinstance(item, str):
-                raise ValueError(f"Key '{key}', item {i}: expected string, got {type(item).__name__}")
+                raise ValueError(
+                    f"Key '{key}', item {i}: expected string, got {type(item).__name__}"
+                )
             string_list.append(item)
 
         if not string_list:
@@ -56,7 +58,7 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s                              # Default: 200 logs over 10 seconds (single execution)
+  %(prog)s                              # Default: 200 logs (single execution)
   %(prog)s -n 100 -s 5s                 # 100 logs over 5 seconds (single execution)
   %(prog)s -f apache_common -n 50       # 50 Apache common format logs (single execution)
   %(prog)s -f json -n 100 --no-loop     # 100 JSON logs, no infinite loop (single execution)
@@ -197,8 +199,8 @@ Supported log formats:
     parser.add_argument(
         "-s",
         "--sleep",
-        default="10s",
-        help="Duration to generate logs over (e.g., 10s, 2m, 1h) (default: 10s)",
+        default=None,
+        help="Duration to generate logs over (e.g., 10s, 2m, 1h)",
     )
 
     # flog options - behavior
@@ -354,7 +356,9 @@ def main():
             if telemetry_attributes:
                 logger.info(f"  Telemetry Attributes: {telemetry_attributes}")
             if otlp_headers:
-                logger.debug(f"  Custom Headers: {otlp_headers}")  # Headers may contain sensitive data
+                logger.debug(
+                    f"  Custom Headers: {otlp_headers}"
+                )  # Headers may contain sensitive data
 
         logger.info(f"  Send Delay: {args.delay}s")
         logger.info(f"  Log Format: {args.format}")

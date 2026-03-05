@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "flog-otlp"
-version = "0.2.3"
-description = "A Python utility that generates realistic log data using flog and sends it to OpenTelemetry Protocol (OTLP) endpoints"
+version = "0.2.4"
+description = "A Python utility that generates realistic log data using flog and sends it to OpenTelemetry Protocol (OTLP) endpoints or Sumo Logic HTTP sources"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [
@@ -22,7 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-keywords = ["otlp", "opentelemetry", "logging", "flog", "observability", "testing"]
+keywords = ["otlp", "opentelemetry", "logging", "flog", "observability", "testing", "sumologic", "http-source"]
 dependencies = [
     "requests>=2.25.0",
     "PyYAML>=6.0.0",
